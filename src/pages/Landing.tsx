@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, Users, Trophy, DollarSign, Star, Shield, Zap } from "lucide-react"
+import { TrendingUp, Users, Trophy, DollarSign, Star, Shield, Zap, Link } from "lucide-react"
 import heroImage from "@/assets/hero-betting.jpg"
 
 export default function Landing() {
@@ -73,12 +73,17 @@ export default function Landing() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8">
-                Create Your League
-              </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8">
-                Join a League
-              </Button>
+              <a href="/betting">
+                <Button size="lg" className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8">
+                  Create Your League
+                </Button>
+              </a>
+              
+              <a href="/betting">
+                <Button size="lg" variant="outline" className="text-lg px-8">
+                  Join a League
+                </Button>
+              </a>
             </div>
 
             <div className="flex items-center justify-center space-x-8 mt-8 text-sm text-muted-foreground">
