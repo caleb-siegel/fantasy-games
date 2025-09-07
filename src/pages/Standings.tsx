@@ -5,8 +5,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trophy, TrendingUp, TrendingDown, Target, Crown, Medal, Award } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 export default function Standings() {
+  const navigate = useNavigate()
   const leagueStandings = [
     {
       position: 1,
@@ -208,7 +210,11 @@ export default function Standings() {
                           {player.streak}
                         </Badge>
 
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => navigate('/profile')}
+                        >
                           View Profile
                         </Button>
                       </div>
@@ -253,7 +259,11 @@ export default function Standings() {
                           </div>
                         </div>
                         
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate('/standings')}
+                        >
                           View Details
                         </Button>
                       </div>

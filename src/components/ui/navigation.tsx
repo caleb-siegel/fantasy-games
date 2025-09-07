@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button"
-import { TrendingUp, Users, Trophy, BarChart3 } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import { TrendingUp, Users, Trophy, BarChart3, LogOut } from "lucide-react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
+import { useAuth } from "@/hooks/useAuth"
 
 export function Navigation() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { isAuthenticated, user, logout } = useAuth()
   
   const navItems = [
     { path: "/", label: "Home", icon: TrendingUp },
@@ -40,12 +43,24 @@ export function Navigation() {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="hidden sm:block text-sm text-muted-foreground">
-              Week 1 • Balance: <span className="text-success font-semibold">$85.50</span>
-            </div>
-            <Button variant="outline" size="sm">
-              Profile
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <div className="hidden sm:block text-sm text-muted-foreground">
+                  Welcome, <span className="text-primary font-semibold">{user?.username}</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => navigate('/profile')}>
+                  Profile
+                </Button>
+                <Button variant="outline" size="sm" onClick={logout}>
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
       </div>

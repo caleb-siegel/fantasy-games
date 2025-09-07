@@ -2,10 +2,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, Users, Trophy, DollarSign, Star, Shield, Zap, Link as LinkIcon } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
+import { useAuth } from "@/hooks/useAuth"
 import heroImage from "@/assets/hero-betting.jpg"
 
 export default function Landing() {
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const features = [
     {
       icon: DollarSign,
@@ -49,6 +52,25 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Sign In Banner for Unauthenticated Users */}
+      {!isAuthenticated && (
+        <div className="bg-primary text-primary-foreground py-3">
+          <div className="container mx-auto px-4 text-center">
+            <p className="text-sm">
+              Ready to start betting? 
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="ml-2"
+                onClick={() => navigate('/auth')}
+              >
+                Sign In or Create Account
+              </Button>
+            </p>
+          </div>
+        </div>
+      )}
+      
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div 
@@ -74,17 +96,43 @@ export default function Landing() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/betting">
-                <Button size="lg" className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8">
-                  Create Your League
-                </Button>
-              </Link>
-              
-              <Link to="/betting">
-                <Button size="lg" variant="outline" className="text-lg px-8">
-                  Join a League
-                </Button>
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Button 
+                    size="lg" 
+                    className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8"
+                    onClick={() => navigate('/leagues')}
+                  >
+                    Go to My Leagues
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="text-lg px-8"
+                    onClick={() => navigate('/betting')}
+                  >
+                    Place Bets
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    size="lg" 
+                    className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8"
+                    onClick={() => navigate('/auth')}
+                  >
+                    Sign Up Now
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="text-lg px-8"
+                    onClick={() => navigate('/auth')}
+                  >
+                    Sign In
+                  </Button>
+                </>
+              )}
             </div>
 
             <div className="flex items-center justify-center space-x-8 mt-8 text-sm text-muted-foreground">
@@ -222,16 +270,43 @@ export default function Landing() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/betting">
-                  <Button size="lg" className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8">
-                    Start Your League Today
-                  </Button>
-                </Link>
-                <Link to="/leagues">
-                  <Button size="lg" variant="outline" className="text-lg px-8">
-                    Browse Leagues
-                  </Button>
-                </Link>
+                {isAuthenticated ? (
+                  <>
+                    <Button 
+                      size="lg" 
+                      className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8"
+                      onClick={() => navigate('/leagues')}
+                    >
+                      View My Leagues
+                    </Button>
+                    <Button 
+                      size="lg" 
+                      variant="outline" 
+                      className="text-lg px-8"
+                      onClick={() => navigate('/betting')}
+                    >
+                      Start Betting
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      size="lg" 
+                      className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8"
+                      onClick={() => navigate('/auth')}
+                    >
+                      Get Started - Sign Up
+                    </Button>
+                    <Button 
+                      size="lg" 
+                      variant="outline" 
+                      className="text-lg px-8"
+                      onClick={() => navigate('/auth')}
+                    >
+                      Sign In
+                    </Button>
+                  </>
+                )}
               </div>
               
               <div className="mt-8 pt-8 border-t border-border">
