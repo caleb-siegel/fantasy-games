@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, Users, Trophy, DollarSign, Star, Shield, Zap, Link } from "lucide-react"
+import { TrendingUp, Users, Trophy, DollarSign, Star, Shield, Zap, Link as LinkIcon } from "lucide-react"
+import { Link } from "react-router-dom"
 import heroImage from "@/assets/hero-betting.jpg"
 
 export default function Landing() {
@@ -73,17 +74,17 @@ export default function Landing() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="/betting">
+              <Link to="/betting">
                 <Button size="lg" className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8">
                   Create Your League
                 </Button>
-              </a>
+              </Link>
               
-              <a href="/betting">
+              <Link to="/betting">
                 <Button size="lg" variant="outline" className="text-lg px-8">
                   Join a League
                 </Button>
-              </a>
+              </Link>
             </div>
 
             <div className="flex items-center justify-center space-x-8 mt-8 text-sm text-muted-foreground">
@@ -221,12 +222,16 @@ export default function Landing() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8">
-                  Start Your League Today
-                </Button>
-                <Button size="lg" variant="outline" className="text-lg px-8">
-                  Watch Demo Video
-                </Button>
+                <Link to="/betting">
+                  <Button size="lg" className="bg-gradient-to-r from-primary to-success hover:from-primary/90 hover:to-success/90 text-lg px-8">
+                    Start Your League Today
+                  </Button>
+                </Link>
+                <Link to="/leagues">
+                  <Button size="lg" variant="outline" className="text-lg px-8">
+                    Browse Leagues
+                  </Button>
+                </Link>
               </div>
               
               <div className="mt-8 pt-8 border-t border-border">
