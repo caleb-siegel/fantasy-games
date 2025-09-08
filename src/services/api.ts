@@ -132,20 +132,42 @@ class ApiService {
   }
 
   // Betting endpoints
-  async getWeeklyOdds(week: number) {
-    return this.request<{ odds: any[] }>(`/api/bets/odds/week/${week}`);
+  async getWeeklyBettingOptions(week: number) {
+    return this.request<{
+      week: number;
+      games: Array<{
+        game: any;
+        betting_options: any;
+      }>;
+    }>(`/api/bets/options/week/${week}`);
   }
 
   async placeBet(data: {
-    matchup_id: number;
-    game_id: string;
-    team: string;
+    matchupId: number;
+    bettingOptionId: number;
     amount: number;
   }) {
     return this.request<{
       message: string;
       bet: any;
     }>('/api/bets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async placeBatchBets(data: {
+    bets: Array<{
+      matchup_id: number;
+      betting_option_id: number;
+      amount: number;
+    }>;
+  }) {
+    return this.request<{
+      message: string;
+      bets: any[];
+      total_amount: number;
+    }>('/api/bets/batch', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -165,6 +187,71 @@ class ApiService {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  }
+
+  async getUserMatchup(leagueId: number, week: number) {
+    return this.request<{
+      matchup: {
+        id: number;
+        league_id: number;
+        week: number;
+        user1_id: number;
+        user2_id: number;
+        user1_username: string;
+        user2_username: string;
+        winner_id: number | null;
+        created_at: string;
+      };
+    }>(`/api/bets/matchup/${leagueId}/${week}`);
+  }
+
+  async confirmLeagueSetup(leagueId: number) {
+    return this.request<{
+      message: string;
+      regular_season_matchups: number;
+      playoff_matchups: number;
+      total_matchups: number;
+    }>(`/api/leagues/${leagueId}/confirm-setup`, {
+      method: 'POST',
+    });
+  }
+
+  async getUserBetsForMatchup(matchupId: number, userId: number) {
+    return this.request<{
+      bets: Array<{
+        id: number;
+        user_id: number;
+        matchup_id: number;
+        betting_option_id: number;
+        amount: number;
+        potential_payout: number;
+        status: string;
+        created_at: string;
+        betting_option: {
+          id: number;
+          game_id: string;
+          market_type: string;
+          outcome_name: string;
+          outcome_point: number | null;
+          bookmaker: string;
+          american_odds: number;
+          decimal_odds: number;
+          created_at: string;
+          game: {
+            id: string;
+            home_team: string;
+            away_team: string;
+            start_time: string;
+            week: number;
+            result: string | null;
+            created_at: string;
+          };
+        };
+      }>;
+      matchup_id: number;
+      user_id: number;
+      week: number;
+    }>(`/api/bets/matchup/${matchupId}/user/${userId}`);
   }
 
   async getUserBets(week: number) {
@@ -202,6 +289,17 @@ class ApiService {
       results: any[];
     }>(`/api/results/week/${week}`);
   }
+
+  async forceUpdateOdds(week?: number) {
+    return this.request<{
+      message: string;
+    }>('/api/bets/admin/force-update', {
+      method: 'POST',
+      body: JSON.stringify({ week }),
+    });
+  }
+
+
 }
 
 // Create and export a singleton instance

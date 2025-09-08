@@ -16,6 +16,5 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     __HMR_CONFIG_NAME__: JSON.stringify("vite"),
-    __WS_TOKEN__: JSON.stringify(""),
   },
 }));

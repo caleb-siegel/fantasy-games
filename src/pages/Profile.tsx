@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { User, Settings, Trophy, TrendingUp, Calendar, DollarSign, Loader2 } from "lucide-react"
+import { User, Settings, Trophy, TrendingUp, Calendar, DollarSign, Loader2, Plus, Users, Target } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { useState, useEffect } from "react"
 import apiService from "@/services/api"
@@ -23,6 +23,7 @@ export default function Profile() {
     longestWinStreak: 0,
     favoriteBetType: "Moneyline"
   })
+  const [userLeagues, setUserLeagues] = useState([])
   const [recentActivity, setRecentActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -34,6 +35,9 @@ export default function Profile() {
         // Fetch user's league data
         const leaguesResponse = await apiService.getUserLeagues()
         const leagues = leaguesResponse.leagues || []
+        
+        // Store leagues for display
+        setUserLeagues(leagues)
         
         // Fetch user's betting history
         const betsResponse = await apiService.getUserBets(1) // Current week
@@ -82,16 +86,58 @@ export default function Profile() {
           favoriteBetType: "Moneyline" // This would need more complex calculation
         })
         
-        // Set recent activity (mock for now, would need API endpoint)
-        if (totalLeagues === 0) {
-          setRecentActivity([
-            { action: "Account created", league: "System", amount: "", date: "Just now" }
-          ])
-        } else {
-          setRecentActivity([
-            { action: "Account created", league: "System", amount: "", date: "Just now" }
-          ])
+        // Build recent activity from real data
+        const activity = []
+        
+        // Add account creation
+        activity.push({
+          action: "Account created",
+          league: "System",
+          amount: "",
+          date: user?.created_at ? new Date(user.created_at).toLocaleDateString() : "Recently"
+        })
+        
+        // Add league activities
+        leagues.forEach(league => {
+          // Add league join/creation
+          activity.push({
+            action: league.is_commissioner ? "Created league" : "Joined league",
+            league: league.name,
+            amount: "",
+            date: league.joined_at ? new Date(league.joined_at).toLocaleDateString() : "Recently"
+          })
+          
+          // Add recent betting activity if available
+          if (league.total_winnings > 0) {
+            activity.push({
+              action: "Weekly winnings",
+              league: league.name,
+              amount: `+$${league.total_winnings.toFixed(2)}`,
+              date: "This week"
+            })
+          }
+        })
+        
+        // Add recent bets activity
+        if (bets.length > 0) {
+          const recentBets = bets.slice(0, 3) // Show last 3 bets
+          recentBets.forEach(bet => {
+            activity.push({
+              action: `Bet placed on ${bet.team}`,
+              league: "Current Week",
+              amount: `-$${bet.amount.toFixed(2)}`,
+              date: bet.created_at ? new Date(bet.created_at).toLocaleDateString() : "Recently"
+            })
+          })
         }
+        
+        // Sort by date (most recent first) and limit to 10 items
+        activity.sort((a, b) => {
+          const dateA = new Date(a.date).getTime()
+          const dateB = new Date(b.date).getTime()
+          return dateB - dateA
+        })
+        setRecentActivity(activity.slice(0, 10))
         
       } catch (error) {
         console.error('Error fetching user stats:', error)
@@ -254,27 +300,52 @@ export default function Profile() {
                   </div>
                 ) : recentActivity.length > 0 ? (
                   <div className="space-y-4">
-                    {recentActivity.map((activity, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <TrendingUp className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <div className="font-medium">{activity.action}</div>
-                            <div className="text-sm text-muted-foreground">{activity.league}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          {activity.amount && (
-                            <div className={`font-semibold ${activity.amount.startsWith('+') ? 'text-success' : 'text-destructive'}`}>
-                              {activity.amount}
+                    {recentActivity.map((activity, index) => {
+                      // Determine icon and color based on activity type
+                      let Icon = TrendingUp
+                      let iconColor = "text-primary"
+                      let bgColor = "bg-primary/10"
+                      
+                      if (activity.action.includes("Account created")) {
+                        Icon = User
+                        iconColor = "text-blue-500"
+                        bgColor = "bg-blue-100"
+                      } else if (activity.action.includes("Created league") || activity.action.includes("Joined league")) {
+                        Icon = Users
+                        iconColor = "text-green-500"
+                        bgColor = "bg-green-100"
+                      } else if (activity.action.includes("Bet placed")) {
+                        Icon = Target
+                        iconColor = "text-orange-500"
+                        bgColor = "bg-orange-100"
+                      } else if (activity.action.includes("winnings")) {
+                        Icon = DollarSign
+                        iconColor = "text-green-500"
+                        bgColor = "bg-green-100"
+                      }
+                      
+                      return (
+                        <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-8 h-8 ${bgColor} rounded-full flex items-center justify-center`}>
+                              <Icon className={`w-4 h-4 ${iconColor}`} />
                             </div>
-                          )}
-                          <div className="text-sm text-muted-foreground">{activity.date}</div>
+                            <div>
+                              <div className="font-medium">{activity.action}</div>
+                              <div className="text-sm text-muted-foreground">{activity.league}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {activity.amount && (
+                              <div className={`font-semibold ${activity.amount.startsWith('+') ? 'text-success' : 'text-destructive'}`}>
+                                {activity.amount}
+                              </div>
+                            )}
+                            <div className="text-sm text-muted-foreground">{activity.date}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
@@ -299,17 +370,40 @@ export default function Profile() {
                     <Loader2 className="w-6 h-6 animate-spin" />
                     <span className="ml-2">Loading leagues...</span>
                   </div>
-                ) : userStats.totalLeagues > 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>League management coming soon</p>
-                    <p className="text-sm mt-2">View your leagues in the Leagues page</p>
-                    <Button 
-                      className="mt-4" 
-                      onClick={() => window.location.href = '/leagues'}
-                    >
-                      Go to Leagues
-                    </Button>
+                ) : userLeagues.length > 0 ? (
+                  <div className="space-y-4">
+                    {userLeagues.map((league) => (
+                      <div key={league.id} className="flex items-center justify-between p-4 rounded-lg border">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                            <Trophy className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-semibold">{league.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {league.member_count} members • {league.is_commissioner ? 'Commissioner' : 'Member'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-muted-foreground">
+                            Record: {league.record || '0-0'}
+                          </div>
+                          <div className="text-sm text-success">
+                            ${league.total_winnings?.toFixed(2) || '0.00'} winnings
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="pt-4">
+                      <Button 
+                        variant="outline" 
+                        className="w-full" 
+                        onClick={() => window.location.href = '/leagues'}
+                      >
+                        Manage Leagues
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">

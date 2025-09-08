@@ -8,6 +8,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Betting from "./pages/Betting";
 import Leagues from "./pages/Leagues";
+import LeagueSettings from "./pages/LeagueSettings";
+import WeeklyMatchup from "./pages/WeeklyMatchup";
 import Standings from "./pages/Standings";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -27,6 +29,8 @@ const App = () => (
             <Route path="/auth" element={<AuthForm />} />
             <Route path="/betting" element={<ProtectedRoute><Betting /></ProtectedRoute>} />
             <Route path="/leagues" element={<ProtectedRoute><Leagues /></ProtectedRoute>} />
+            <Route path="/leagues/:leagueId/settings" element={<ProtectedRoute><LeagueSettings /></ProtectedRoute>} />
+            <Route path="/leagues/:leagueId/matchup" element={<ProtectedRoute><WeeklyMatchup /></ProtectedRoute>} />
             <Route path="/standings" element={<ProtectedRoute><Standings /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

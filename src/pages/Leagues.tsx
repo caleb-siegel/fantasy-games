@@ -18,6 +18,8 @@ interface League {
   member_count: number
   is_commissioner: boolean
   invite_code: string
+  is_setup_complete: boolean
+  setup_completed_at: string | null
   created_at: string
   record?: string
   total_winnings?: number
@@ -131,7 +133,7 @@ export default function Leagues() {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => navigate('/profile')}
+                        onClick={() => navigate(`/leagues/${league.id}/settings`)}
                         title="League Settings"
                       >
                         <Settings className="w-4 h-4" />
@@ -150,6 +152,19 @@ export default function Leagues() {
                     <div className="text-xs text-muted-foreground">
                       Share this code to invite others
                     </div>
+                    
+                    {/* Setup Status */}
+                    <div className="flex justify-between text-sm">
+                      <span>Status</span>
+                      <Badge variant={league.is_setup_complete ? "default" : "secondary"}>
+                        {league.is_setup_complete ? "Active" : "Setup Pending"}
+                      </Badge>
+                    </div>
+                    {!league.is_setup_complete && league.is_commissioner && (
+                      <div className="text-xs text-yellow-600 dark:text-yellow-400">
+                        Commissioner needs to complete setup
+                      </div>
+                    )}
                   </div>
 
                   {/* User Stats */}
@@ -176,6 +191,12 @@ export default function Leagues() {
                   <div className="flex gap-2 pt-2">
                     <Button 
                       className="flex-1" 
+                      onClick={() => navigate(`/leagues/${league.id}/matchup`)}
+                    >
+                      My Matchup
+                    </Button>
+                    <Button 
+                      variant="outline" 
                       onClick={() => navigate('/betting')}
                     >
                       Place Bets
@@ -184,7 +205,7 @@ export default function Leagues() {
                       variant="outline" 
                       onClick={() => navigate('/standings')}
                     >
-                      View Standings
+                      Standings
                     </Button>
                   </div>
                 </CardContent>
