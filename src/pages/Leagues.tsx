@@ -191,22 +191,18 @@ export default function Leagues() {
                   <div className="flex gap-2 pt-2">
                     <Button 
                       className="flex-1" 
-                      onClick={() => navigate(`/leagues/${league.id}/matchup`)}
+                      onClick={() => navigate(`/leagues/${league.id}`)}
                     >
-                      My Matchup
+                      View League
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => navigate('/betting')}
-                    >
-                      Place Bets
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => navigate('/standings')}
-                    >
-                      Standings
-                    </Button>
+                    {league.is_commissioner && (
+                      <Button 
+                        variant="outline" 
+                        onClick={() => navigate(`/leagues/${league.id}/settings`)}
+                      >
+                        Settings
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -71,7 +71,7 @@ interface BettingInterfaceProps {
   week: number;
 }
 
-export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, week }) => {
+export const BettingInterfaceNew: React.FC<BettingInterfaceProps> = ({ matchupId, week }) => {
   const { user } = useAuth();
   const [games, setGames] = useState<GameWithOptions[]>([]);
   const [userBets, setUserBets] = useState<UserBet[]>([]);
@@ -184,7 +184,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
       setError(null);
 
       const batchBets = betslipBets.map(betslipBet => ({
-        matchup_id: matchupId,
         betting_option_id: betslipBet.bettingOption.id,
         amount: betslipBet.amount
       }));

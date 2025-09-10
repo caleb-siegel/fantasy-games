@@ -2,17 +2,18 @@ import { Button } from "@/components/ui/button"
 import { TrendingUp, Users, Trophy, BarChart3, LogOut } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
+import { useLeagueMembership } from "@/hooks/useLeagueMembership"
 
 export function Navigation() {
   const location = useLocation()
   const navigate = useNavigate()
   const { isAuthenticated, user, logout } = useAuth()
+  const { hasLeagues } = useLeagueMembership()
   
+  // Navigation items - only show core navigation, league-specific actions are within league pages
   const navItems = [
     { path: "/", label: "Home", icon: TrendingUp },
     { path: "/leagues", label: "My Leagues", icon: Users },
-    { path: "/betting", label: "Place Bets", icon: BarChart3 },
-    { path: "/standings", label: "Standings", icon: Trophy },
   ]
 
   return (

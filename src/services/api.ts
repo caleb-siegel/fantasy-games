@@ -146,6 +146,7 @@ class ApiService {
     matchupId: number;
     bettingOptionId: number;
     amount: number;
+    week: number;
   }) {
     return this.request<{
       message: string;
@@ -162,6 +163,7 @@ class ApiService {
       betting_option_id: number;
       amount: number;
     }>;
+    week: number;
   }) {
     return this.request<{
       message: string;
@@ -299,6 +301,112 @@ class ApiService {
     });
   }
 
+  // Enhanced League Management
+  async generateSchedule(leagueId: number) {
+    return this.request(`/api/leagues/${leagueId}/schedule`, {
+      method: 'POST',
+    });
+  }
+
+  async generatePlayoffs(leagueId: number) {
+    return this.request(`/api/leagues/${leagueId}/playoffs`, {
+      method: 'POST',
+    });
+  }
+
+  async getWeekMatchups(leagueId: number, week: number) {
+    return this.request(`/api/leagues/${leagueId}/matchups/${week}`);
+  }
+
+  // Enhanced Results and Bet Evaluation
+  async updateGameResults(games: Array<{id: string, result: string}>) {
+    return this.request('/api/results/update', {
+      method: 'POST',
+      body: JSON.stringify({ games }),
+    });
+  }
+
+  async evaluateAllPendingBets() {
+    return this.request('/api/results/evaluate-bets', {
+      method: 'POST',
+    });
+  }
+
+  async getMatchupDetails(matchupId: number) {
+    return this.request(`/api/results/matchup/${matchupId}/details`);
+  }
+
+  // Player Profile API
+  async getPlayerProfile(leagueId: number, userId: number) {
+    return this.request(`/api/leagues/${leagueId}/players/${userId}`);
+  }
+
+  async getPlayerStats(leagueId: number, userId: number) {
+    return this.request(`/api/leagues/${leagueId}/players/${userId}/stats`);
+  }
+
+  async getPlayerBets(leagueId: number, userId: number, week?: number) {
+    const params = week ? `?week=${week}` : '';
+    return this.request(`/api/leagues/${leagueId}/players/${userId}/bets${params}`);
+  }
+
+  // Enhanced Standings API
+  async getComprehensiveStandings(leagueId: number) {
+    return this.request(`/api/leagues/${leagueId}/standings/comprehensive`);
+  }
+
+  async getStandingsHistory(leagueId: number) {
+    return this.request(`/api/leagues/${leagueId}/standings/history`);
+  }
+
+  // Calendar and Schedule API
+  async getLeagueCalendar(leagueId: number) {
+    return this.request(`/api/leagues/${leagueId}/calendar`);
+  }
+
+  async getAllMatchups(leagueId: number) {
+    return this.request(`/api/leagues/${leagueId}/matchups/all`);
+  }
+
+  // Bet Management Enhancements
+  async getBetHistory(leagueId: number, userId?: number, week?: number) {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId.toString());
+    if (week) params.append('week', week.toString());
+    
+    const queryString = params.toString();
+    return this.request(`/api/bets/history${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getBetAnalytics(leagueId: number, userId?: number) {
+    const params = userId ? `?user_id=${userId}` : '';
+    return this.request(`/api/bets/analytics${params}`);
+  }
+
+  // League Settings and Management
+  async updateLeagueSettings(leagueId: number, settings: any) {
+    return this.request(`/api/leagues/${leagueId}/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async getLeagueSettings(leagueId: number) {
+    return this.request(`/api/leagues/${leagueId}/settings`);
+  }
+
+  // Export and Reporting
+  async exportStandings(leagueId: number, format: 'csv' | 'json' = 'csv') {
+    return this.request(`/api/leagues/${leagueId}/export/standings?format=${format}`);
+  }
+
+  async exportMatchups(leagueId: number, format: 'csv' | 'json' = 'csv') {
+    return this.request(`/api/leagues/${leagueId}/export/matchups?format=${format}`);
+  }
+
+  async exportPlayerStats(leagueId: number, userId: number, format: 'csv' | 'json' = 'csv') {
+    return this.request(`/api/leagues/${leagueId}/export/player/${userId}?format=${format}`);
+  }
 
 }
 

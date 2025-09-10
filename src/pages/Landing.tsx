@@ -109,7 +109,7 @@ export default function Landing() {
                     size="lg" 
                     variant="outline" 
                     className="text-lg px-8"
-                    onClick={() => navigate('/betting')}
+                    onClick={() => navigate('/leagues')}
                   >
                     Place Bets
                   </Button>
@@ -283,7 +283,7 @@ export default function Landing() {
                       size="lg" 
                       variant="outline" 
                       className="text-lg px-8"
-                      onClick={() => navigate('/betting')}
+                      onClick={() => navigate('/leagues')}
                     >
                       Start Betting
                     </Button>

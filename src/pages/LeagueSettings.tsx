@@ -34,6 +34,7 @@ export default function LeagueSettings() {
   const [league, setLeague] = useState<LeagueDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirmingSetup, setConfirmingSetup] = useState(false);
+  const [regeneratingSchedule, setRegeneratingSchedule] = useState(false);
 
   useEffect(() => {
     if (leagueId) {
@@ -74,6 +75,23 @@ export default function LeagueSettings() {
       toast.error('Failed to confirm league setup');
     } finally {
       setConfirmingSetup(false);
+    }
+  };
+
+  const handleRegenerateSchedule = async () => {
+    if (!leagueId) return;
+    
+    try {
+      setRegeneratingSchedule(true);
+      await apiService.generateSchedule(parseInt(leagueId));
+      toast.success('Schedule regenerated successfully!');
+      // Reload league details to show updated status
+      await loadLeagueDetails();
+    } catch (error) {
+      console.error('Failed to regenerate schedule:', error);
+      toast.error('Failed to regenerate schedule');
+    } finally {
+      setRegeneratingSchedule(false);
     }
   };
 
@@ -220,12 +238,24 @@ export default function LeagueSettings() {
                       <Badge variant="outline">Weeks 15-17</Badge>
                     </div>
                     <div className="pt-2 border-t">
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mb-3">
                         {league.is_setup_complete 
                           ? "All matchups have been generated"
                           : "Matchups will be generated when setup is confirmed"
                         }
                       </p>
+                      {league.is_setup_complete && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleRegenerateSchedule}
+                          disabled={regeneratingSchedule}
+                          className="w-full"
+                        >
+                          <RefreshCw className={`w-4 h-4 mr-2 ${regeneratingSchedule ? 'animate-spin' : ''}`} />
+                          Regenerate Schedule
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>

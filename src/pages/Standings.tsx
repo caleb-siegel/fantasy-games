@@ -399,7 +399,7 @@ export default function Standings() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => navigate('/standings')}
+                            onClick={() => navigate('/leagues')}
                           >
                             View Details
                           </Button>

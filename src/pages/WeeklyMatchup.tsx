@@ -443,11 +443,11 @@ export default function WeeklyMatchup() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4">
-              <Button onClick={() => navigate(`/betting?league=${leagueId}&week=${currentWeek}`)}>
+              <Button onClick={() => navigate(`/leagues/${leagueId}?tab=betting`)}>
                 <Target className="w-4 h-4 mr-2" />
                 Place Bets
               </Button>
-              <Button variant="outline" onClick={() => navigate('/standings')}>
+              <Button variant="outline" onClick={() => navigate(`/leagues/${leagueId}?tab=standings`)}>
                 <Trophy className="w-4 h-4 mr-2" />
                 View Standings
               </Button>
