@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RefreshCw, DollarSign, TrendingUp, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
-import { Betslip } from './EnhancedBetslip';
+import { CompactBetslip } from './CompactBetslip';
+import { toast } from 'sonner';
 
 interface BettingOption {
   id: number;
@@ -69,10 +71,12 @@ interface BetslipBet {
 interface BettingInterfaceProps {
   matchupId: number;
   week: number;
+  leagueId: number;
 }
 
-export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, week }) => {
+export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, week, leagueId }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [games, setGames] = useState<GameWithOptions[]>([]);
   const [userBets, setUserBets] = useState<UserBet[]>([]);
   const [betslipBets, setBetslipBets] = useState<BetslipBet[]>([]);
@@ -123,6 +127,14 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
     if (existingBetIndex >= 0) {
       const existingBet = betslipBets[existingBetIndex];
+      
+      // Check if it's the exact same bet (same bookmaker and odds)
+      if (existingBet.bettingOption.bookmaker === bettingOption.bookmaker && 
+          existingBet.bettingOption.american_odds === bettingOption.american_odds) {
+        toast.error('This bet is already in your betslip');
+        return;
+      }
+      
       const isBetterOdds = (newOdds: number, existingOdds: number) => {
         const newDecimal = newOdds > 0 ? (newOdds / 100) + 1 : (100 / Math.abs(newOdds)) + 1;
         const existingDecimal = existingOdds > 0 ? (existingOdds / 100) + 1 : (100 / Math.abs(existingOdds)) + 1;
@@ -137,9 +149,9 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
           amount: Math.min(existingBet.amount, remainingBalance)
         };
         setBetslipBets(updatedBets);
+        toast.success(`Updated bet with better odds: ${bettingOption.bookmaker} ${formatOdds(bettingOption.american_odds)}`);
       } else {
-        setError(`Cannot add bet: ${bettingOption.bookmaker} odds (${formatOdds(bettingOption.american_odds)}) are worse than existing ${existingBet.bettingOption.bookmaker} odds (${formatOdds(existingBet.bettingOption.american_odds)})`);
-        setTimeout(() => setError(null), 3000);
+        toast.error(`Cannot add bet: ${bettingOption.bookmaker} odds (${formatOdds(bettingOption.american_odds)}) are worse than existing ${existingBet.bettingOption.bookmaker} odds (${formatOdds(existingBet.bettingOption.american_odds)})`);
       }
     } else {
       const amount = Math.min(remainingBalance, 10); // Default to $10 or remaining balance
@@ -176,29 +188,16 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
     setExpandedGames(newExpandedGames);
   };
 
-  const placeAllBets = async () => {
-    if (betslipBets.length === 0) return;
+  const navigateToBettingReview = () => {
+    // Store bets in sessionStorage to pass to the review page
+    sessionStorage.setItem('betslipBets', JSON.stringify(betslipBets));
+    navigate(`/leagues/${leagueId}/betting-review`);
+  };
 
-    try {
-      setPlacingBets(true);
-      setError(null);
-
-      const batchBets = betslipBets.map(betslipBet => ({
-        matchup_id: matchupId,
-        betting_option_id: betslipBet.bettingOption.id,
-        amount: betslipBet.amount
-      }));
-
-      await apiService.placeBatchBets({ bets: batchBets, week });
-
-      setBetslipBets([]);
-      await loadBettingData();
-    } catch (error) {
-      console.error('Failed to place bets:', error);
-      setError('Failed to place bets');
-    } finally {
-      setPlacingBets(false);
-    }
+  const handleBetsPlaced = () => {
+    // Clear betslip after bets are placed
+    setBetslipBets([]);
+    loadBettingData();
   };
 
   const handlePlaceBet = async () => {
@@ -215,8 +214,10 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
       setError(null);
 
       await apiService.placeBet({
-        betting_option_id: selectedBettingOption.id,
-        amount: amount
+        matchupId: matchupId,
+        bettingOptionId: selectedBettingOption.id,
+        amount: amount,
+        week: week
       });
 
       setBetAmount('');
@@ -533,15 +534,12 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
         {/* Right side: Desktop betslip */}
         <div className="w-80 flex-shrink-0">
-          <div className="sticky top-6">
-            <Betslip
+          <div className="sticky top-20">
+            <CompactBetslip
               bets={betslipBets}
               onRemoveBet={removeFromBetslip}
-              onUpdateAmount={updateBetslipAmount}
-              onPlaceBets={placeAllBets}
+              onContinueToReview={navigateToBettingReview}
               remainingBalance={remainingBalance}
-              placingBets={placingBets}
-              error={error}
               week={week}
             />
           </div>
@@ -593,14 +591,11 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
       {/* Mobile Bottom Betslip */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
-        <Betslip
+        <CompactBetslip
           bets={betslipBets}
           onRemoveBet={removeFromBetslip}
-          onUpdateAmount={updateBetslipAmount}
-          onPlaceBets={placeAllBets}
+          onContinueToReview={navigateToBettingReview}
           remainingBalance={remainingBalance}
-          placingBets={placingBets}
-          error={error}
           week={week}
         />
       </div>

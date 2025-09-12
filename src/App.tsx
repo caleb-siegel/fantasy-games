@@ -8,6 +8,7 @@ import { LeagueMembershipProvider } from "@/hooks/useLeagueMembership";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Betting from "./pages/Betting";
+import BettingReview from "./pages/BettingReview";
 import Leagues from "./pages/Leagues";
 import LeaguePage from "./pages/LeaguePage";
 import LeagueSettings from "./pages/LeagueSettings";
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/leagues/:leagueId" element={<ProtectedRoute requireLeague={true}><LeaguePage /></ProtectedRoute>} />
               <Route path="/leagues/:leagueId/settings" element={<ProtectedRoute requireLeague={true}><LeagueSettings /></ProtectedRoute>} />
               <Route path="/leagues/:leagueId/matchup" element={<ProtectedRoute requireLeague={true}><WeeklyMatchup /></ProtectedRoute>} />
+              <Route path="/leagues/:leagueId/betting-review" element={<ProtectedRoute requireLeague={true}><BettingReview /></ProtectedRoute>} />
               <Route path="/leagues/:leagueId/players/:userId" element={<ProtectedRoute requireLeague={true}><PlayerProfile /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute requireLeague={false}><Profile /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

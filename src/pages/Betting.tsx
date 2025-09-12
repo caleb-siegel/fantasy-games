@@ -174,6 +174,7 @@ export default function Betting() {
           <BettingInterface
             matchupId={currentMatchup.id}
             week={currentWeek}
+            leagueId={selectedLeague.id}
           />
         )}
         

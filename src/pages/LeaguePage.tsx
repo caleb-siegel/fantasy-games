@@ -534,6 +534,7 @@ export default function LeaguePage() {
                 <BettingInterface 
                   matchupId={currentMatchup.id} 
                   week={currentWeek} 
+                  leagueId={league.id}
                 />
               ) : (
                 <Card>
