@@ -7,10 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, DollarSign, TrendingUp, Clock, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, DollarSign, TrendingUp, Clock, AlertTriangle, X, Calculator, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { calculateParlayFromOptions } from '@/utils/parlayUtils';
 
 interface BettingOption {
   id: number;
@@ -35,6 +36,24 @@ interface BetslipBet {
   };
 }
 
+interface ParlayBettingOption {
+  id: number;
+  game_id: string;
+  market_type: string;
+  outcome_name: string;
+  outcome_point: number | null;
+  bookmaker: string;
+  american_odds: number;
+  decimal_odds: number;
+  is_locked?: boolean;
+  locked_at?: string;
+  gameInfo: {
+    home_team: string;
+    away_team: string;
+    start_time: string;
+  };
+}
+
 interface BettingReviewProps {
   matchupId?: number;
   week?: number;
@@ -50,38 +69,80 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   const { leagueId } = useParams<{ leagueId: string }>();
   const { user } = useAuth();
   const [betslipBets, setBetslipBets] = useState<BetslipBet[]>([]);
+  const [parlayBets, setParlayBets] = useState<ParlayBettingOption[]>([]);
+  const [parlayStake, setParlayStake] = useState<number>(0);
+  const [showParlayDetails, setShowParlayDetails] = useState<boolean>(false);
   const [placingBets, setPlacingBets] = useState(false);
+  const [placingParlay, setPlacingParlay] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [userBets, setUserBets] = useState<any[]>([]);
   const [matchupId, setMatchupId] = useState<number>(propMatchupId || 0);
   const [week, setWeek] = useState<number>(propWeek || 1);
 
-  const totalBetAmount = betslipBets.reduce((sum, bet) => sum + bet.amount, 0);
-  const totalPotentialPayout = betslipBets.reduce((sum, bet) => sum + (bet.amount * bet.bettingOption.decimal_odds), 0);
+  // Calculate parlay information
+  const parlayCalculation = parlayBets.length >= 1 ? calculateParlayFromOptions(parlayStake, parlayBets) : null;
+  
+  // Debug logging
+  console.log('🔍 BettingReview State:');
+  console.log('parlayBets:', parlayBets);
+  console.log('parlayBets.length:', parlayBets.length);
+  console.log('parlayStake:', parlayStake);
+  console.log('parlayCalculation:', parlayCalculation);
+  
+  const totalBetAmount = betslipBets.reduce((sum, bet) => sum + bet.amount, 0) + parlayStake;
+  const totalPotentialPayout = betslipBets.reduce((sum, bet) => sum + (bet.amount * bet.bettingOption.decimal_odds), 0) + (parlayCalculation?.return || 0);
   const totalProfit = totalPotentialPayout - totalBetAmount;
   const budgetUsed = totalBetAmount;
   const budgetPercentage = (budgetUsed / 100) * 100;
   const remainingBalance = 100 - userBets.reduce((sum, bet) => sum + bet.amount, 0);
 
   useEffect(() => {
-    // Load bets from sessionStorage
+    // Load bets and parlay bets from sessionStorage
     const storedBets = sessionStorage.getItem('betslipBets');
+    const storedParlayBets = sessionStorage.getItem('parlayBets');
+    
+    console.log('🔍 BettingReview Debug:');
+    console.log('Stored bets:', storedBets);
+    console.log('Stored parlay bets:', storedParlayBets);
+    
     if (storedBets) {
       try {
         const parsedBets = JSON.parse(storedBets);
+        console.log('✅ Parsed bets:', parsedBets);
         setBetslipBets(parsedBets);
       } catch (error) {
-        console.error('Failed to parse stored bets:', error);
+        console.error('❌ Failed to parse stored bets:', error);
         navigate(-1); // Go back if there's an error
       }
-    } else {
-      navigate(-1); // Go back if no bets found
+    }
+    
+    if (storedParlayBets) {
+      try {
+        const parsedParlayBets = JSON.parse(storedParlayBets);
+        console.log('✅ Parsed parlay bets:', parsedParlayBets);
+        setParlayBets(parsedParlayBets);
+      } catch (error) {
+        console.error('❌ Failed to parse stored parlay bets:', error);
+      }
+    }
+    
+    // If no bets at all, go back
+    if (!storedBets && !storedParlayBets) {
+      console.log('❌ No bets found, navigating back');
+      navigate(-1);
     }
 
     loadUserBets();
     loadMatchupData();
   }, []);
+
+  // Set initial parlay stake after userBets are loaded
+  useEffect(() => {
+    if (parlayBets.length >= 2 && parlayStake === 0) {
+      setParlayStake(Math.min(remainingBalance, 10)); // Default to $10 or remaining balance
+    }
+  }, [userBets, parlayBets.length, parlayStake, remainingBalance]);
 
   const loadMatchupData = async () => {
     if (!leagueId) return;
@@ -128,6 +189,19 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
     return bettingOption.outcome_name;
   };
 
+  const getParlayLegDisplayName = (leg: ParlayBettingOption) => {
+    if (leg.market_type === 'totals') {
+      return `${leg.outcome_name} ${leg.outcome_point}`;
+    } else if (leg.market_type === 'spreads') {
+      return `${leg.outcome_name} ${leg.outcome_point && leg.outcome_point > 0 ? '+' : ''}${leg.outcome_point}`;
+    }
+    return leg.outcome_name;
+  };
+
+  const formatAmericanOdds = (americanOdds: number) => {
+    return americanOdds > 0 ? `+${americanOdds}` : americanOdds.toString();
+  };
+
   const updateBetAmount = (index: number, amount: number) => {
     const validAmount = isNaN(amount) ? 0 : amount;
     if (validAmount < 0 || validAmount > remainingBalance) return;
@@ -139,6 +213,13 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
 
   const removeBet = (index: number) => {
     setBetslipBets(betslipBets.filter((_, i) => i !== index));
+  };
+
+  const handleParlayStakeChange = (value: string) => {
+    const stake = parseFloat(value) || 0;
+    if (stake >= 0 && stake <= remainingBalance) {
+      setParlayStake(stake);
+    }
   };
 
   const formatGameTime = (startTime: string) => {
@@ -165,26 +246,42 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   };
 
   const confirmPlaceBets = async () => {
-    if (betslipBets.length === 0) return;
+    if (betslipBets.length === 0 && parlayBets.length === 0) return;
 
     try {
       setPlacingBets(true);
+      setPlacingParlay(true);
       setError(null);
 
-      const batchBets = betslipBets.map(betslipBet => ({
-        matchupId: matchupId,
-        bettingOptionId: betslipBet.bettingOption.id,
-        amount: betslipBet.amount,
-        week: week
-      }));
+      // Place regular bets
+      if (betslipBets.length > 0) {
+        const batchBets = betslipBets.map(betslipBet => ({
+          matchupId: matchupId,
+          bettingOptionId: betslipBet.bettingOption.id,
+          amount: betslipBet.amount,
+          week: week
+        }));
 
-      await apiService.placeBatchBets({ bets: batchBets, week });
+        await apiService.placeBatchBets({ bets: batchBets, week });
+      }
 
-      toast.success(`Successfully placed ${betslipBets.length} bet${betslipBets.length !== 1 ? 's' : ''}!`);
+      // Place parlay bet
+      if (parlayBets.length >= 1 && parlayStake > 0) {
+        await apiService.placeParlayBet({
+          matchupId: matchupId,
+          week: week,
+          amount: parlayStake,
+          bettingOptionIds: parlayBets.map(leg => leg.id)
+        });
+      }
+
+      const totalBetsPlaced = betslipBets.length + (parlayBets.length >= 1 ? 1 : 0);
+      toast.success(`Successfully placed ${totalBetsPlaced} bet${totalBetsPlaced !== 1 ? 's' : ''}!`);
       setShowConfirmation(false);
       
       // Clear sessionStorage
       sessionStorage.removeItem('betslipBets');
+      sessionStorage.removeItem('parlayBets');
       
       // Call callback if provided
       if (onBetsPlaced) {
@@ -197,6 +294,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       setError('Failed to place bets');
     } finally {
       setPlacingBets(false);
+      setPlacingParlay(false);
     }
   };
 
@@ -273,7 +371,97 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left side - Individual bets */}
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Your Bets ({betslipBets.length})</h2>
+            <h2 className="text-xl font-semibold">Your Bets ({betslipBets.length + (parlayBets.length >= 1 ? 1 : 0)})</h2>
+            
+            {/* Parlay Bet */}
+            {parlayBets.length >= 1 && (
+              <Card className="bg-blue-900 border-blue-700">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg text-blue-200 flex items-center gap-2">
+                        <Calculator className="h-5 w-5" />
+                        Parlay ({parlayBets.length} legs)
+                      </CardTitle>
+                      <div className="text-sm text-blue-300 mt-1">
+                        {parlayCalculation && (
+                          <>
+                            Odds: {parlayCalculation.decimal_odds.toFixed(2)} • 
+                            Stake: ${parlayStake.toFixed(2)} • 
+                            Return: ${parlayCalculation.return.toFixed(2)}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowParlayDetails(!showParlayDetails)}
+                      className="text-blue-300 hover:text-blue-100 p-1"
+                    >
+                      {showParlayDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </CardHeader>
+                
+                {showParlayDetails && (
+                  <CardContent className="pt-0">
+                    <div className="space-y-3">
+                      {/* Parlay Legs */}
+                      <div className="space-y-2">
+                        {parlayBets.map((leg, index) => (
+                          <div key={leg.id} className="text-sm bg-blue-800 p-2 rounded">
+                            <div className="font-medium text-blue-200">
+                              Leg {index + 1}: {leg.gameInfo.away_team} @ {leg.gameInfo.home_team}
+                            </div>
+                            <div className="text-blue-300">
+                              {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Parlay Stake Input */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-300 text-sm">Parlay Stake:</span>
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-blue-300" />
+                          <Input
+                            type="number"
+                            value={parlayStake}
+                            onChange={(e) => handleParlayStakeChange(e.target.value)}
+                            className="w-24 h-8 text-sm bg-blue-800 border-blue-600 text-blue-100"
+                            min="0"
+                            max={remainingBalance}
+                            step="0.01"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Parlay Payout Info */}
+                      {parlayCalculation && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-blue-300">Potential Payout:</span>
+                            <span className="text-blue-100 font-semibold">
+                              ${parlayCalculation.return.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-blue-300">Potential Profit:</span>
+                            <span className="text-green-400 font-semibold">
+                              +${parlayCalculation.profit.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            )}
+            
+            {/* Regular Bets */}
             {betslipBets.map((bet, index) => (
               <Card key={index} className="bg-gray-800 border-gray-700">
                 <CardHeader className="pb-3">
@@ -383,10 +571,10 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
                 {/* Place Bets Button */}
                 <Button
                   onClick={handlePlaceBets}
-                  disabled={placingBets || hasLockedBets || totalBetAmount === 0}
+                  disabled={placingBets || placingParlay || hasLockedBets || totalBetAmount === 0}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
                 >
-                  {placingBets ? (
+                  {placingBets || placingParlay ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Placing Bets...
@@ -394,7 +582,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
                   ) : (
                     <>
                       <TrendingUp className="h-4 w-4 mr-2" />
-                      Place {betslipBets.length} Bet{betslipBets.length !== 1 ? 's' : ''} (${totalBetAmount.toFixed(2)})
+                      Place {betslipBets.length + (parlayBets.length >= 1 ? 1 : 0)} Bet{(betslipBets.length + (parlayBets.length >= 1 ? 1 : 0)) !== 1 ? 's' : ''} (${totalBetAmount.toFixed(2)})
                     </>
                   )}
                 </Button>
@@ -417,6 +605,20 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
           <div className="space-y-4">
             <div className="space-y-2">
               <h4 className="font-semibold">Bet Summary:</h4>
+              
+              {/* Parlay Bet Summary */}
+              {parlayBets.length >= 1 && parlayStake > 0 && (
+                <div className="text-sm bg-blue-100 p-2 rounded">
+                  <div className="font-medium text-blue-800">
+                    Parlay ({parlayBets.length} legs) • ${parlayStake}
+                  </div>
+                  <div className="text-blue-600">
+                    {parlayCalculation && `Odds: ${parlayCalculation.decimal_odds.toFixed(2)} • Return: $${parlayCalculation.return.toFixed(2)}`}
+                  </div>
+                </div>
+              )}
+              
+              {/* Regular Bets Summary */}
               {betslipBets.map((bet, index) => (
                 <div key={index} className="text-sm bg-gray-100 p-2 rounded">
                   <div className="font-medium">

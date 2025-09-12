@@ -11,6 +11,7 @@ import { RefreshCw, DollarSign, TrendingUp, Clock, ChevronDown, ChevronUp, X } f
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { CompactBetslip } from './CompactBetslip';
+import { BettingOption as ParlayBettingOption } from '@/utils/parlayUtils';
 import { toast } from 'sonner';
 
 interface BettingOption {
@@ -22,6 +23,7 @@ interface BettingOption {
   bookmaker: string;
   american_odds: number;
   decimal_odds: number;
+  is_locked?: boolean;
 }
 
 interface Game {
@@ -92,6 +94,8 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
     bookmakers: any[];
     outcomeName: string;
   } | null>(null);
+  const [parlayBets, setParlayBets] = useState<ParlayBettingOption[]>([]);
+  const [placingParlay, setPlacingParlay] = useState(false);
 
   const totalBetAmount = userBets.reduce((sum, bet) => sum + bet.amount, 0);
   const betslipTotalAmount = betslipBets.reduce((sum, bet) => sum + bet.amount, 0);
@@ -189,8 +193,17 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
   };
 
   const navigateToBettingReview = () => {
-    // Store bets in sessionStorage to pass to the review page
+    // Store bets and parlay bets in sessionStorage to pass to the review page
+    console.log('🚀 BettingInterface: Storing to sessionStorage');
+    console.log('Betslip bets:', betslipBets);
+    console.log('Parlay bets:', parlayBets);
+    
     sessionStorage.setItem('betslipBets', JSON.stringify(betslipBets));
+    sessionStorage.setItem('parlayBets', JSON.stringify(parlayBets));
+    
+    console.log('✅ Stored betslipBets:', sessionStorage.getItem('betslipBets'));
+    console.log('✅ Stored parlayBets:', sessionStorage.getItem('parlayBets'));
+    
     navigate(`/leagues/${leagueId}/betting-review`);
   };
 
@@ -198,6 +211,65 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
     // Clear betslip after bets are placed
     setBetslipBets([]);
     loadBettingData();
+  };
+
+  const addToParlay = (bettingOption: BettingOption, gameInfo: { home_team: string; away_team: string; start_time: string }) => {
+    const parlayOption: ParlayBettingOption = {
+      id: bettingOption.id,
+      game_id: bettingOption.game_id,
+      market_type: bettingOption.market_type,
+      outcome_name: bettingOption.outcome_name,
+      outcome_point: bettingOption.outcome_point,
+      bookmaker: bettingOption.bookmaker,
+      american_odds: bettingOption.american_odds,
+      decimal_odds: bettingOption.decimal_odds,
+      is_locked: bettingOption.is_locked,
+      gameInfo: gameInfo
+    } as ParlayBettingOption;
+
+    // Check if already in parlay
+    if (parlayBets.some(bet => bet.id === bettingOption.id)) {
+      toast.error('This bet is already in your parlay');
+      return;
+    }
+
+    setParlayBets(prev => {
+      const newParlayBets = [...prev, parlayOption];
+      console.log('🎯 Adding to parlay, new parlay bets:', newParlayBets);
+      return newParlayBets;
+    });
+    toast.success('Added to parlay');
+  };
+
+  const removeFromParlay = (bettingOptionId: number) => {
+    setParlayBets(parlayBets.filter(bet => bet.id !== bettingOptionId));
+  };
+
+  const placeParlay = async (stake: number) => {
+    if (parlayBets.length < 2) return;
+
+    try {
+      setPlacingParlay(true);
+      setError(null);
+
+      const bettingOptionIds = parlayBets.map(bet => bet.id);
+      
+      await apiService.placeParlayBet({
+        matchupId: matchupId,
+        bettingOptionIds: bettingOptionIds,
+        amount: stake,
+        week: week
+      });
+
+      toast.success(`Successfully placed ${parlayBets.length}-leg parlay!`);
+      setParlayBets([]);
+      await loadBettingData();
+    } catch (error) {
+      console.error('Failed to place parlay:', error);
+      setError('Failed to place parlay bet');
+    } finally {
+      setPlacingParlay(false);
+    }
   };
 
   const handlePlaceBet = async () => {
@@ -257,16 +329,12 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
     if (!bookmakers.length) return null;
     
     const sorted = bookmakers.sort((a, b) => {
-      if (a.american_odds > 0 && b.american_odds < 0) {
-        return b.american_odds - a.american_odds; // Higher positive odds first
-      } else if (a.american_odds < 0 && b.american_odds < 0) {
-        return b.american_odds - a.american_odds; // Less negative odds first
-      } else if (a.american_odds > 0 && b.american_odds < 0) {
-        return -1; // Positive odds before negative odds
-      } else if (a.american_odds < 0 && b.american_odds > 0) {
-        return 1; // Negative odds after positive odds
-      }
-      return 0;
+      // Convert to decimal odds for proper comparison
+      const aDecimal = a.american_odds > 0 ? (a.american_odds / 100) + 1 : (100 / Math.abs(a.american_odds)) + 1;
+      const bDecimal = b.american_odds > 0 ? (b.american_odds / 100) + 1 : (100 / Math.abs(b.american_odds)) + 1;
+      
+      // Sort by decimal odds descending (highest first)
+      return bDecimal - aDecimal;
     });
     
     return sorted[0]; // Return the best odds
@@ -341,31 +409,60 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
                                 <div className="flex items-center gap-2">
                                   {outcome.bookmakers.length > 0 && (
                                     <>
-                                      <Button
-                                        size="sm"
-                                        className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 text-sm"
-                                        onClick={() => {
-                                          const bestOdds = findBestOdds(outcome.bookmakers);
-                                          if (bestOdds) {
-                                            addToBetslip({
-                                              id: bestOdds.id,
-                                              game_id: gameWithOptions.game.id,
-                                              market_type: marketType,
-                                              outcome_name: outcome.outcome_name,
-                                              outcome_point: outcome.outcome_point,
-                                              bookmaker: bestOdds.bookmaker,
-                                              american_odds: bestOdds.american_odds,
-                                              decimal_odds: bestOdds.decimal_odds
-                                            }, {
-                                              home_team: gameWithOptions.game.home_team,
-                                              away_team: gameWithOptions.game.away_team,
-                                              start_time: gameWithOptions.game.start_time
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        {formatOdds(findBestOdds(outcome.bookmakers)?.american_odds || 0)}
-                                      </Button>
+                                      <div className="flex flex-row gap-1">
+                                        <Button
+                                          size="sm"
+                                          className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 text-sm"
+                                          onClick={() => {
+                                            const bestOdds = findBestOdds(outcome.bookmakers);
+                                            if (bestOdds) {
+                                              addToBetslip({
+                                                id: bestOdds.id,
+                                                game_id: gameWithOptions.game.id,
+                                                market_type: marketType,
+                                                outcome_name: outcome.outcome_name,
+                                                outcome_point: outcome.outcome_point,
+                                                bookmaker: bestOdds.bookmaker,
+                                                american_odds: bestOdds.american_odds,
+                                                decimal_odds: bestOdds.decimal_odds
+                                              }, {
+                                                home_team: gameWithOptions.game.home_team,
+                                                away_team: gameWithOptions.game.away_team,
+                                                start_time: gameWithOptions.game.start_time
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          {formatOdds(findBestOdds(outcome.bookmakers)?.american_odds || 0)}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 px-2 py-1 text-xs"
+                                          onClick={() => {
+                                            const bestOdds = findBestOdds(outcome.bookmakers);
+                                            if (bestOdds) {
+                                              addToParlay({
+                                                id: bestOdds.id,
+                                                game_id: gameWithOptions.game.id,
+                                                market_type: marketType,
+                                                outcome_name: outcome.outcome_name,
+                                                outcome_point: outcome.outcome_point,
+                                                bookmaker: bestOdds.bookmaker,
+                                                american_odds: bestOdds.american_odds,
+                                                decimal_odds: bestOdds.decimal_odds,
+                                                is_locked: false
+                                              }, {
+                                                home_team: gameWithOptions.game.home_team,
+                                                away_team: gameWithOptions.game.away_team,
+                                                start_time: gameWithOptions.game.start_time
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          Parlay
+                                        </Button>
+                                      </div>
                                       {outcome.bookmakers.length > 1 && (
                                         <Button
                                           size="sm"
@@ -417,31 +514,60 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
                                 <div className="flex items-center gap-2">
                                   {outcome.bookmakers.length > 0 && (
                                     <>
-                                      <Button
-                                        size="sm"
-                                        className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 text-sm"
-                                        onClick={() => {
-                                          const bestOdds = findBestOdds(outcome.bookmakers);
-                                          if (bestOdds) {
-                                            addToBetslip({
-                                              id: bestOdds.id,
-                                              game_id: gameWithOptions.game.id,
-                                              market_type: marketType,
-                                              outcome_name: outcome.outcome_name,
-                                              outcome_point: outcome.outcome_point,
-                                              bookmaker: bestOdds.bookmaker,
-                                              american_odds: bestOdds.american_odds,
-                                              decimal_odds: bestOdds.decimal_odds
-                                            }, {
-                                              home_team: gameWithOptions.game.home_team,
-                                              away_team: gameWithOptions.game.away_team,
-                                              start_time: gameWithOptions.game.start_time
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        {formatOdds(findBestOdds(outcome.bookmakers)?.american_odds || 0)}
-                                      </Button>
+                                      <div className="flex flex-row gap-1">
+                                        <Button
+                                          size="sm"
+                                          className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 text-sm"
+                                          onClick={() => {
+                                            const bestOdds = findBestOdds(outcome.bookmakers);
+                                            if (bestOdds) {
+                                              addToBetslip({
+                                                id: bestOdds.id,
+                                                game_id: gameWithOptions.game.id,
+                                                market_type: marketType,
+                                                outcome_name: outcome.outcome_name,
+                                                outcome_point: outcome.outcome_point,
+                                                bookmaker: bestOdds.bookmaker,
+                                                american_odds: bestOdds.american_odds,
+                                                decimal_odds: bestOdds.decimal_odds
+                                              }, {
+                                                home_team: gameWithOptions.game.home_team,
+                                                away_team: gameWithOptions.game.away_team,
+                                                start_time: gameWithOptions.game.start_time
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          {formatOdds(findBestOdds(outcome.bookmakers)?.american_odds || 0)}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 px-2 py-1 text-xs"
+                                          onClick={() => {
+                                            const bestOdds = findBestOdds(outcome.bookmakers);
+                                            if (bestOdds) {
+                                              addToParlay({
+                                                id: bestOdds.id,
+                                                game_id: gameWithOptions.game.id,
+                                                market_type: marketType,
+                                                outcome_name: outcome.outcome_name,
+                                                outcome_point: outcome.outcome_point,
+                                                bookmaker: bestOdds.bookmaker,
+                                                american_odds: bestOdds.american_odds,
+                                                decimal_odds: bestOdds.decimal_odds,
+                                                is_locked: false
+                                              }, {
+                                                home_team: gameWithOptions.game.home_team,
+                                                away_team: gameWithOptions.game.away_team,
+                                                start_time: gameWithOptions.game.start_time
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          Parlay
+                                        </Button>
+                                      </div>
                                       {outcome.bookmakers.length > 1 && (
                                         <Button
                                           size="sm"
@@ -534,13 +660,17 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
         {/* Right side: Desktop betslip */}
         <div className="w-80 flex-shrink-0">
-          <div className="sticky top-20">
+          <div className="sticky top-20 space-y-4">
             <CompactBetslip
               bets={betslipBets}
+              parlayBets={parlayBets}
               onRemoveBet={removeFromBetslip}
+              onRemoveParlayLeg={removeFromParlay}
+              onPlaceParlay={placeParlay}
               onContinueToReview={navigateToBettingReview}
               remainingBalance={remainingBalance}
               week={week}
+              placingParlay={placingParlay}
             />
           </div>
         </div>
@@ -593,10 +723,14 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
         <CompactBetslip
           bets={betslipBets}
+          parlayBets={parlayBets}
           onRemoveBet={removeFromBetslip}
+          onRemoveParlayLeg={removeFromParlay}
+          onPlaceParlay={placeParlay}
           onContinueToReview={navigateToBettingReview}
           remainingBalance={remainingBalance}
           week={week}
+          placingParlay={placingParlay}
         />
       </div>
 
@@ -618,16 +752,12 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
             <div className="space-y-3">
               {popupBookmakers.bookmakers
                 .sort((a, b) => {
-                  if (a.american_odds > 0 && b.american_odds < 0) {
-                    return b.american_odds - a.american_odds;
-                  } else if (a.american_odds < 0 && b.american_odds < 0) {
-                    return b.american_odds - a.american_odds;
-                  } else if (a.american_odds > 0 && b.american_odds < 0) {
-                    return -1;
-                  } else if (a.american_odds < 0 && b.american_odds > 0) {
-                    return 1;
-                  }
-                  return 0;
+                  // Convert to decimal odds for proper comparison
+                  const aDecimal = a.american_odds > 0 ? (a.american_odds / 100) + 1 : (100 / Math.abs(a.american_odds)) + 1;
+                  const bDecimal = b.american_odds > 0 ? (b.american_odds / 100) + 1 : (100 / Math.abs(b.american_odds)) + 1;
+                  
+                  // Sort by decimal odds descending (highest first)
+                  return bDecimal - aDecimal;
                 })
                 .map((bookmaker, index) => (
                   <div

@@ -255,16 +255,12 @@ export const BettingInterfaceNew: React.FC<BettingInterfaceProps> = ({ matchupId
     if (!bookmakers.length) return null;
     
     const sorted = bookmakers.sort((a, b) => {
-      if (a.american_odds > 0 && b.american_odds < 0) {
-        return b.american_odds - a.american_odds; // Higher positive odds first
-      } else if (a.american_odds < 0 && b.american_odds < 0) {
-        return b.american_odds - a.american_odds; // Less negative odds first
-      } else if (a.american_odds > 0 && b.american_odds < 0) {
-        return -1; // Positive odds before negative odds
-      } else if (a.american_odds < 0 && b.american_odds > 0) {
-        return 1; // Negative odds after positive odds
-      }
-      return 0;
+      // Convert to decimal odds for proper comparison
+      const aDecimal = a.american_odds > 0 ? (a.american_odds / 100) + 1 : (100 / Math.abs(a.american_odds)) + 1;
+      const bDecimal = b.american_odds > 0 ? (b.american_odds / 100) + 1 : (100 / Math.abs(b.american_odds)) + 1;
+      
+      // Sort by decimal odds descending (highest first)
+      return bDecimal - aDecimal;
     });
     
     return sorted[0]; // Return the best odds
@@ -622,16 +618,12 @@ export const BettingInterfaceNew: React.FC<BettingInterfaceProps> = ({ matchupId
             <div className="space-y-3">
               {popupBookmakers.bookmakers
                 .sort((a, b) => {
-                  if (a.american_odds > 0 && b.american_odds < 0) {
-                    return b.american_odds - a.american_odds;
-                  } else if (a.american_odds < 0 && b.american_odds < 0) {
-                    return b.american_odds - a.american_odds;
-                  } else if (a.american_odds > 0 && b.american_odds < 0) {
-                    return -1;
-                  } else if (a.american_odds < 0 && b.american_odds > 0) {
-                    return 1;
-                  }
-                  return 0;
+                  // Convert to decimal odds for proper comparison
+                  const aDecimal = a.american_odds > 0 ? (a.american_odds / 100) + 1 : (100 / Math.abs(a.american_odds)) + 1;
+                  const bDecimal = b.american_odds > 0 ? (b.american_odds / 100) + 1 : (100 / Math.abs(b.american_odds)) + 1;
+                  
+                  // Sort by decimal odds descending (highest first)
+                  return bDecimal - aDecimal;
                 })
                 .map((bookmaker, index) => (
                   <div

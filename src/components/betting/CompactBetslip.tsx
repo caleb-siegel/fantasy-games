@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, ShoppingCart, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, ShoppingCart, ArrowRight, ChevronDown, ChevronUp, Calculator, Plus } from 'lucide-react';
+import { BettingOption as ParlayBettingOption, calculateParlayFromOptions, formatAmericanOdds, getOutcomeDisplayName, getMarketDisplayName } from '@/utils/parlayUtils';
 
 interface BettingOption {
   id: number;
@@ -25,29 +26,67 @@ interface BetslipBet {
   };
 }
 
+interface ParlayBet {
+  id: string;
+  legs: ParlayBettingOption[];
+  stake: number;
+  gameInfo: {
+    home_team: string;
+    away_team: string;
+    start_time: string;
+  };
+}
+
+type UnifiedBet = BetslipBet | ParlayBet;
+
 interface CompactBetslipProps {
   bets: BetslipBet[];
+  parlayBets: ParlayBettingOption[];
   onRemoveBet: (index: number) => void;
+  onRemoveParlayLeg: (bettingOptionId: number) => void;
+  onPlaceParlay: (stake: number) => void;
   onContinueToReview: () => void;
   remainingBalance: number;
   week: number;
+  placingParlay: boolean;
 }
 
 export const CompactBetslip: React.FC<CompactBetslipProps> = ({
   bets,
+  parlayBets,
   onRemoveBet,
+  onRemoveParlayLeg,
+  onPlaceParlay,
   onContinueToReview,
   remainingBalance,
-  week
+  week,
+  placingParlay
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [parlayStake, setParlayStake] = useState<number>(10);
+  const [showParlayDetails, setShowParlayDetails] = useState(false);
   
   // Calculate max height based on screen size - 30% of viewport height
   const maxHeight = typeof window !== 'undefined' ? `${window.innerHeight * 0.3}px` : '192px';
   
-  // Different scroll triggers for mobile vs desktop
-  const mobileScrollTrigger = 3;
-  const desktopScrollTrigger = 5;
+  // Dynamic scroll triggers based on content height
+  const mobileScrollTrigger = 3; // Keep fixed for mobile due to limited space
+  const desktopMaxHeight = typeof window !== 'undefined' ? `${window.innerHeight * 0.7}px` : '600px'; // 70% of viewport height for desktop
+  
+  const totalBets = bets.length + (parlayBets.length > 0 ? 1 : 0);
+  const shouldScrollMobile = totalBets >= mobileScrollTrigger;
+  
+  // For desktop, we'll use CSS to handle dynamic scrolling based on content height
+  const emptyState = bets.length === 0 && parlayBets.length === 0;
+  
+  const parlayCalculation = parlayBets.length >= 2 ? calculateParlayFromOptions(parlayStake, parlayBets) : null;
+  
+  const handleParlayStakeChange = (value: string) => {
+    const numValue = parseFloat(value) || 0;
+    if (numValue >= 0 && numValue <= remainingBalance) {
+      setParlayStake(numValue);
+    }
+  };
   
   const formatOdds = (americanOdds: number) => {
     return americanOdds > 0 ? `+${americanOdds}` : americanOdds.toString();
@@ -63,8 +102,18 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
     return bettingOption.outcome_name;
   };
 
+  const getParlayLegDisplayName = (leg: ParlayBettingOption) => {
+    if (leg.market_type === 'totals') {
+      return `${leg.outcome_name} ${leg.outcome_point}`;
+    } else if (leg.market_type === 'spreads') {
+      return `${leg.outcome_name} ${leg.outcome_point && leg.outcome_point > 0 ? '+' : ''}${leg.outcome_point}`;
+    }
+    return leg.outcome_name;
+  };
+
   const totalBetAmount = bets.reduce((sum, bet) => sum + bet.amount, 0);
-  const emptyState = bets.length === 0;
+  const parlayTotalAmount = parlayCalculation ? parlayCalculation.stake : 0;
+  const grandTotal = totalBetAmount + parlayTotalAmount;
 
   return (
     <div className="bg-gray-900 border-t border-gray-800 shadow-lg">
@@ -75,7 +124,7 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-white" />
-              <span className="text-white font-semibold">Betslip ({bets.length})</span>
+              <span className="text-white font-semibold">Betslip ({totalBets})</span>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="bg-green-600 text-white">
@@ -100,7 +149,96 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
               <p className="text-sm">No bets selected - Click on odds to add bets</p>
             </div>
           ) : !isCollapsed ? (
-            <div className={`space-y-2 ${bets.length > mobileScrollTrigger ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800' : ''}`} style={{ maxHeight: bets.length > mobileScrollTrigger ? maxHeight : 'none' }}>
+            <div className={`space-y-2 ${shouldScrollMobile ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800' : ''}`} style={{ maxHeight: shouldScrollMobile ? maxHeight : 'none' }}>
+              {/* Parlay Bet - Always at the top */}
+              {parlayBets.length > 0 && (
+                <Card className="bg-blue-900 border-blue-700">
+                  <CardContent className="p-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Calculator className="h-4 w-4 text-blue-300" />
+                          <span className="text-blue-200 font-medium text-sm">
+                            Parlay ({parlayBets.length} legs)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowParlayDetails(!showParlayDetails)}
+                            className="text-blue-300 hover:text-blue-100 p-1"
+                          >
+                            {showParlayDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => parlayBets.forEach(leg => onRemoveParlayLeg(leg.id))}
+                            className="text-blue-300 hover:text-blue-100 p-1 h-6 w-6 flex-shrink-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {parlayCalculation && (
+                        <div className="text-xs text-blue-300">
+                          Stake: ${parlayStake.toFixed(2)} • Odds: {parlayCalculation.decimal_odds.toFixed(2)} • 
+                          Return: ${parlayCalculation.return.toFixed(2)}
+                        </div>
+                      )}
+                      
+                      {showParlayDetails && (
+                        <div className="space-y-1 pt-2 border-t border-blue-700">
+                          {parlayBets.map((leg, index) => (
+                            <div key={leg.id} className="flex items-center justify-between text-xs">
+                              <div className="text-blue-200">
+                                Leg {index + 1}: {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onRemoveParlayLeg(leg.id)}
+                                className="text-blue-300 hover:text-blue-100 p-1 h-4 w-4"
+                              >
+                                <X className="h-2 w-2" />
+                              </Button>
+                            </div>
+                          ))}
+                          
+                          {parlayBets.length >= 2 && (
+                            <div className="pt-2 border-t border-blue-700">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  value={parlayStake}
+                                  onChange={(e) => handleParlayStakeChange(e.target.value)}
+                                  min="1"
+                                  max={remainingBalance}
+                                  step="0.01"
+                                  className="flex-1 bg-blue-800 border border-blue-600 rounded px-2 py-1 text-blue-100 text-xs"
+                                  placeholder="Stake"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => onPlaceParlay(parlayStake)}
+                                  disabled={placingParlay || parlayStake <= 0 || parlayStake > remainingBalance}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
+                                >
+                                  {placingParlay ? 'Placing...' : 'Place'}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Single Bets */}
               {bets.slice().reverse().map((bet, index) => (
                 <Card key={bets.length - 1 - index} className="bg-gray-800 border-gray-700">
                   <CardContent className="p-3">
@@ -138,7 +276,7 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
               className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold h-12"
             >
               <ArrowRight className="h-4 w-4 mr-2" />
-              Continue to Review ({bets.length} bet{bets.length !== 1 ? 's' : ''})
+              Continue to Review ({bets.length + (parlayBets.length >= 2 ? 1 : 0)} bet{(bets.length + (parlayBets.length >= 2 ? 1 : 0)) !== 1 ? 's' : ''})
             </Button>
           )}
         </div>
@@ -150,7 +288,7 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-white" />
-                <span className="text-white font-semibold">Betslip ({bets.length})</span>
+                <span className="text-white font-semibold">Betslip ({totalBets})</span>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="bg-green-600 text-white">
@@ -175,7 +313,96 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
                 <p className="text-sm">No bets selected - Click on odds to add bets</p>
               </div>
             ) : !isCollapsed ? (
-              <div className={`space-y-2 ${bets.length > desktopScrollTrigger ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800' : ''}`} style={{ maxHeight: bets.length > desktopScrollTrigger ? maxHeight : 'none' }}>
+              <div className="space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800" style={{ maxHeight: desktopMaxHeight }}>
+                {/* Desktop Parlay Bet - Always at the top */}
+                {parlayBets.length > 0 && (
+                  <Card className="bg-blue-900 border-blue-700">
+                    <CardContent className="p-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Calculator className="h-4 w-4 text-blue-300" />
+                            <span className="text-blue-200 font-medium text-sm">
+                              Parlay ({parlayBets.length} legs)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowParlayDetails(!showParlayDetails)}
+                              className="text-blue-300 hover:text-blue-100 p-1"
+                            >
+                              {showParlayDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => parlayBets.forEach(leg => onRemoveParlayLeg(leg.id))}
+                              className="text-blue-300 hover:text-blue-100 p-1 h-6 w-6 flex-shrink-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {parlayCalculation && (
+                          <div className="text-xs text-blue-300">
+                            Stake: ${parlayStake.toFixed(2)} • Odds: {parlayCalculation.decimal_odds.toFixed(2)} • 
+                            Return: ${parlayCalculation.return.toFixed(2)}
+                          </div>
+                        )}
+                        
+                        {showParlayDetails && (
+                          <div className="space-y-1 pt-2 border-t border-blue-700">
+                            {parlayBets.map((leg, index) => (
+                              <div key={leg.id} className="flex items-center justify-between text-xs">
+                                <div className="text-blue-200">
+                                  Leg {index + 1}: {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onRemoveParlayLeg(leg.id)}
+                                  className="text-blue-300 hover:text-blue-100 p-1 h-4 w-4"
+                                >
+                                  <X className="h-2 w-2" />
+                                </Button>
+                              </div>
+                            ))}
+                            
+                            {parlayBets.length >= 2 && (
+                              <div className="pt-2 border-t border-blue-700">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    value={parlayStake}
+                                    onChange={(e) => handleParlayStakeChange(e.target.value)}
+                                    min="1"
+                                    max={remainingBalance}
+                                    step="0.01"
+                                    className="flex-1 bg-blue-800 border border-blue-600 rounded px-2 py-1 text-blue-100 text-xs"
+                                    placeholder="Stake"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => onPlaceParlay(parlayStake)}
+                                    disabled={placingParlay || parlayStake <= 0 || parlayStake > remainingBalance}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1"
+                                  >
+                                    {placingParlay ? 'Placing...' : 'Place'}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* Desktop Single Bets */}
                 {bets.slice().reverse().map((bet, index) => (
                   <Card key={bets.length - 1 - index} className="bg-gray-800 border-gray-700">
                     <CardContent className="p-3">
@@ -213,7 +440,7 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
               >
                 <ArrowRight className="h-4 w-4 mr-2" />
-                Continue ({bets.length})
+                Continue ({bets.length + (parlayBets.length >= 2 ? 1 : 0)})
               </Button>
             )}
           </div>

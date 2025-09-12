@@ -50,6 +50,18 @@ interface BetSummary {
     away_team: string;
     start_time: string;
   };
+  is_parlay?: boolean;
+  parlay_legs?: Array<{
+    id: number;
+    parlay_bet_id: number;
+    betting_option_id: number;
+    leg_number: number;
+    american_odds: number;
+    decimal_odds: number;
+    outcome_name: string;
+    outcome_point: number | null;
+    market_type: string;
+  }>;
 }
 
 interface ComprehensiveMatchupsProps {
@@ -80,12 +92,12 @@ export function ComprehensiveMatchups({
       // Load all matchups for the current week
       const currentWeekResponse = await apiService.getWeekMatchups(leagueId, currentWeek);
       console.log('Current week response:', currentWeekResponse);
-      setCurrentWeekMatchups(currentWeekResponse.matchups);
+      setCurrentWeekMatchups((currentWeekResponse as any).matchups);
       
       // Load all matchups for calendar view
       const allMatchupsResponse = await apiService.getAllMatchups(leagueId);
       console.log('All matchups response:', allMatchupsResponse);
-      setAllMatchups(allMatchupsResponse.matchups);
+      setAllMatchups((allMatchupsResponse as any).matchups);
       
     } catch (error) {
       console.error('Failed to load matchup data:', error);
@@ -134,6 +146,10 @@ export function ComprehensiveMatchups({
   };
 
   const formatBetDescription = (bet: BetSummary) => {
+    if (bet.is_parlay) {
+      return `Parlay: ${bet.betting_option.outcome_name}`;
+    }
+    
     const { betting_option } = bet;
     const marketType = getMarketDisplayName(betting_option.market_type);
     
@@ -146,7 +162,16 @@ export function ComprehensiveMatchups({
     }
   };
 
-  const formatOdds = (americanOdds: number) => {
+  const getParlayLegDisplayName = (leg: any) => {
+    if (leg.market_type === 'totals') {
+      return `${leg.outcome_name} ${leg.outcome_point}`;
+    } else if (leg.market_type === 'spreads') {
+      return `${leg.outcome_name} ${leg.outcome_point && leg.outcome_point > 0 ? '+' : ''}${leg.outcome_point}`;
+    }
+    return leg.outcome_name;
+  };
+
+  const formatAmericanOdds = (americanOdds: number) => {
     return americanOdds > 0 ? `+${americanOdds}` : americanOdds.toString();
   };
 
@@ -204,44 +229,58 @@ export function ComprehensiveMatchups({
                         Bet: ${matchup.user1_total_bet}
                       </div>
                       <div className="font-semibold text-sm lg:text-base">
-                        Potential: ${matchup.user1_potential_payout}
+                        Potential: ${matchup.user1_potential_payout.toFixed(2)}
                       </div>
                     </div>
                   </div>
                   <div className="space-y-3">
                     {matchup.user1_bets.length > 0 ? (
                       matchup.user1_bets.map((bet) => (
-                        <div key={bet.id} className="p-3 bg-muted/50 rounded-lg border">
+                        <div key={bet.id} className={`p-3 rounded-lg border ${bet.is_parlay ? 'bg-blue-900 border-blue-700' : 'bg-muted/50'}`}>
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               {getBetStatusIcon(bet.status)}
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm truncate">
-                                  {bet.game.away_team} @ {bet.game.home_team}
+                                <div className="font-medium text-sm truncate text-blue-100">
+                                  {bet.is_parlay ? 'Parlay Bet' : `${bet.game.away_team} @ ${bet.game.home_team}`}
                                 </div>
-                                <div className="text-xs text-muted-foreground truncate">
+                                <div className="text-xs text-blue-300 truncate">
                                   {formatBetDescription(bet)}
                                 </div>
+                                {bet.is_parlay && bet.parlay_legs && (
+                                  <div className="space-y-2 mt-2">
+                                    {bet.parlay_legs.map((leg: any, index: number) => (
+                                      <div key={leg.id} className="text-sm bg-blue-800 p-2 rounded">
+                                        <div className="font-medium text-blue-200">
+                                          Leg {index + 1}: {leg.gameInfo?.away_team || 'Away'} @ {leg.gameInfo?.home_team || 'Home'}
+                                        </div>
+                                        <div className="text-blue-300">
+                                          {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker || 'Multiple'}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            <Badge variant="outline" className="text-xs flex-shrink-0">
+                            <Badge variant="outline" className={`text-xs flex-shrink-0 ${bet.is_parlay ? 'border-blue-500 text-blue-200 bg-blue-800' : ''}`}>
                               {bet.betting_option.bookmaker}
                             </Badge>
                           </div>
                           <div className="flex justify-between items-center text-xs">
                             <div className="flex items-center gap-3">
                               <div>
-                                <span className="text-muted-foreground">Bet:</span>
-                                <span className="font-medium ml-1">${bet.amount}</span>
+                                <span className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Bet:</span>
+                                <span className={`font-medium ml-1 ${bet.is_parlay ? "text-blue-100" : ""}`}>${bet.amount}</span>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Odds:</span>
-                                <span className="font-medium ml-1">{formatOdds(bet.betting_option.american_odds)}</span>
+                                <span className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Odds:</span>
+                                <span className={`font-medium ml-1 ${bet.is_parlay ? "text-blue-100" : ""}`}>{formatAmericanOdds(bet.betting_option.american_odds)}</span>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-muted-foreground">Potential:</div>
-                              <div className="font-semibold text-green-600">${bet.potential_payout.toFixed(2)}</div>
+                              <div className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Potential:</div>
+                              <div className={`font-semibold ${bet.is_parlay ? "text-blue-100" : "text-green-600"}`}>${bet.potential_payout.toFixed(2)}</div>
                             </div>
                           </div>
                         </div>
@@ -263,44 +302,58 @@ export function ComprehensiveMatchups({
                         Bet: ${matchup.user2_total_bet}
                       </div>
                       <div className="font-semibold text-sm lg:text-base">
-                        Potential: ${matchup.user2_potential_payout}
+                        Potential: ${matchup.user2_potential_payout.toFixed(2)}
                       </div>
                     </div>
                   </div>
                   <div className="space-y-3">
                     {matchup.user2_bets.length > 0 ? (
                       matchup.user2_bets.map((bet) => (
-                        <div key={bet.id} className="p-3 bg-muted/50 rounded-lg border">
+                        <div key={bet.id} className={`p-3 rounded-lg border ${bet.is_parlay ? 'bg-blue-900 border-blue-700' : 'bg-muted/50'}`}>
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               {getBetStatusIcon(bet.status)}
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm truncate">
-                                  {bet.game.away_team} @ {bet.game.home_team}
+                                <div className="font-medium text-sm truncate text-blue-100">
+                                  {bet.is_parlay ? 'Parlay Bet' : `${bet.game.away_team} @ ${bet.game.home_team}`}
                                 </div>
-                                <div className="text-xs text-muted-foreground truncate">
+                                <div className="text-xs text-blue-300 truncate">
                                   {formatBetDescription(bet)}
                                 </div>
+                                {bet.is_parlay && bet.parlay_legs && (
+                                  <div className="space-y-2 mt-2">
+                                    {bet.parlay_legs.map((leg: any, index: number) => (
+                                      <div key={leg.id} className="text-sm bg-blue-800 p-2 rounded">
+                                        <div className="font-medium text-blue-200">
+                                          Leg {index + 1}: {leg.gameInfo?.away_team || 'Away'} @ {leg.gameInfo?.home_team || 'Home'}
+                                        </div>
+                                        <div className="text-blue-300">
+                                          {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker || 'Multiple'}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            <Badge variant="outline" className="text-xs flex-shrink-0">
+                            <Badge variant="outline" className={`text-xs flex-shrink-0 ${bet.is_parlay ? 'border-blue-500 text-blue-200 bg-blue-800' : ''}`}>
                               {bet.betting_option.bookmaker}
                             </Badge>
                           </div>
                           <div className="flex justify-between items-center text-xs">
                             <div className="flex items-center gap-3">
                               <div>
-                                <span className="text-muted-foreground">Bet:</span>
-                                <span className="font-medium ml-1">${bet.amount}</span>
+                                <span className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Bet:</span>
+                                <span className={`font-medium ml-1 ${bet.is_parlay ? "text-blue-100" : ""}`}>${bet.amount}</span>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Odds:</span>
-                                <span className="font-medium ml-1">{formatOdds(bet.betting_option.american_odds)}</span>
+                                <span className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Odds:</span>
+                                <span className={`font-medium ml-1 ${bet.is_parlay ? "text-blue-100" : ""}`}>{formatAmericanOdds(bet.betting_option.american_odds)}</span>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-muted-foreground">Potential:</div>
-                              <div className="font-semibold text-green-600">${bet.potential_payout.toFixed(2)}</div>
+                              <div className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Potential:</div>
+                              <div className={`font-semibold ${bet.is_parlay ? "text-blue-100" : "text-green-600"}`}>${bet.potential_payout.toFixed(2)}</div>
                             </div>
                           </div>
                         </div>

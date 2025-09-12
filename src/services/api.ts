@@ -301,13 +301,6 @@ class ApiService {
     });
   }
 
-  // Enhanced League Management
-  async generateSchedule(leagueId: number) {
-    return this.request(`/api/leagues/${leagueId}/schedule`, {
-      method: 'POST',
-    });
-  }
-
   async generatePlayoffs(leagueId: number) {
     return this.request(`/api/leagues/${leagueId}/playoffs`, {
       method: 'POST',
@@ -406,6 +399,32 @@ class ApiService {
 
   async exportPlayerStats(leagueId: number, userId: number, format: 'csv' | 'json' = 'csv') {
     return this.request(`/api/leagues/${leagueId}/export/player/${userId}?format=${format}`);
+  }
+
+  // Parlay betting methods
+  async placeParlayBet(data: {
+    matchupId: number;
+    bettingOptionIds: number[];
+    amount: number;
+    week: number;
+  }) {
+    return this.request('/api/bets/parlay', {
+      method: 'POST',
+      body: JSON.stringify({
+        matchup_id: data.matchupId,
+        betting_option_ids: data.bettingOptionIds,
+        amount: data.amount,
+        week: data.week
+      }),
+    });
+  }
+
+  async getUserParlayBets(week: number) {
+    return this.request(`/api/bets/parlay/week/${week}`);
+  }
+
+  async getParlayBetDetails(parlayId: number) {
+    return this.request(`/api/bets/parlay/${parlayId}`);
   }
 
 }
