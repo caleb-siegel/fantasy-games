@@ -259,7 +259,10 @@ class ApiService {
   async getUserBets(week: number) {
     return this.request<{
       bets: any[];
+      parlay_bets: any[];
       total_bet_amount: number;
+      total_regular_bet_amount: number;
+      total_parlay_bet_amount: number;
       remaining_balance: number;
       week: number;
     }>(`/api/bets/user/${week}`);
@@ -425,6 +428,43 @@ class ApiService {
 
   async getParlayBetDetails(parlayId: number) {
     return this.request(`/api/bets/parlay/${parlayId}`);
+  }
+
+  // Bet validation and statistics endpoints
+  async getUserBettingStats(userId?: number) {
+    const endpoint = userId ? `/api/validation/user-stats/${userId}` : '/api/validation/user-stats';
+    return this.request(endpoint);
+  }
+
+  async getBetHistoryPaginated(userId?: number, page: number = 1, perPage: number = 20) {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId.toString());
+    params.append('page', page.toString());
+    params.append('per_page', perPage.toString());
+    
+    return this.request(`/api/validation/bet-history/${userId || 'current'}?${params.toString()}`);
+  }
+
+  async getPendingBets() {
+    return this.request('/api/validation/pending-bets');
+  }
+
+  async getGameResults(gameId: string) {
+    return this.request(`/api/validation/game-results/${gameId}`);
+  }
+
+  async getRecentGames() {
+    return this.request('/api/validation/recent-games');
+  }
+
+  async getSystemStatus() {
+    return this.request('/api/validation/system-status');
+  }
+
+  async runBetValidation() {
+    return this.request('/api/validation/run-validation', {
+      method: 'POST',
+    });
   }
 
 }

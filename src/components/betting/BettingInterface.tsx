@@ -11,7 +11,7 @@ import { RefreshCw, DollarSign, TrendingUp, Clock, ChevronDown, ChevronUp, X } f
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { CompactBetslip } from './CompactBetslip';
-import { BettingOption as ParlayBettingOption } from '@/utils/parlayUtils';
+import { BettingOption as ParlayBettingOption, calculateParlayFromOptions } from '@/utils/parlayUtils';
 import { toast } from 'sonner';
 
 interface BettingOption {
@@ -81,6 +81,9 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
   const navigate = useNavigate();
   const [games, setGames] = useState<GameWithOptions[]>([]);
   const [userBets, setUserBets] = useState<UserBet[]>([]);
+  const [remainingBalance, setRemainingBalance] = useState<number>(100);
+  const [totalBetAmount, setTotalBetAmount] = useState<number>(0);
+  const [existingParlayBets, setExistingParlayBets] = useState<any[]>([]);
   const [betslipBets, setBetslipBets] = useState<BetslipBet[]>([]);
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -97,9 +100,16 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
   const [parlayBets, setParlayBets] = useState<ParlayBettingOption[]>([]);
   const [placingParlay, setPlacingParlay] = useState(false);
 
-  const totalBetAmount = userBets.reduce((sum, bet) => sum + bet.amount, 0);
   const betslipTotalAmount = betslipBets.reduce((sum, bet) => sum + bet.amount, 0);
-  const remainingBalance = 100 - totalBetAmount;
+  
+  // Calculate parlay stake for betslip display
+  const parlayCalculation = parlayBets.length >= 2 ? calculateParlayFromOptions(10, parlayBets) : null;
+  const parlayStakeAmount = parlayCalculation ? parlayCalculation.stake : 0;
+  const totalBetslipAmount = betslipTotalAmount + parlayStakeAmount;
+  
+  // Calculate total potential payout including both regular bets and parlay bets
+  const totalPotentialPayout = userBets.reduce((sum, bet) => sum + bet.potential_payout, 0) + 
+    existingParlayBets.reduce((sum, parlay) => sum + parlay.potential_payout, 0);
 
   useEffect(() => {
     loadBettingData();
@@ -115,6 +125,9 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
       const betsResponse = await apiService.getUserBets(week);
       setUserBets(betsResponse.bets);
+      setRemainingBalance(betsResponse.remaining_balance);
+      setTotalBetAmount(betsResponse.total_bet_amount);
+      setExistingParlayBets(betsResponse.parlay_bets || []);
 
     } catch (error) {
       console.error('Failed to load betting data:', error);
@@ -636,11 +649,11 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
                   <div className="text-sm text-gray-400">Placed</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-blue-400">${betslipTotalAmount.toFixed(2)}</div>
+                  <div className="text-2xl font-bold text-blue-400">${totalBetslipAmount.toFixed(2)}</div>
                   <div className="text-sm text-gray-400">Betslip</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-green-500">${userBets.reduce((sum, bet) => sum + bet.potential_payout, 0).toFixed(2)}</div>
+                  <div className="text-2xl font-bold text-green-500">${totalPotentialPayout.toFixed(2)}</div>
                   <div className="text-sm text-gray-400">Potential Payout</div>
                 </div>
               </div>
@@ -697,11 +710,11 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
                 <div className="text-sm text-gray-400">Placed</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-blue-400">${betslipTotalAmount.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-blue-400">${totalBetslipAmount.toFixed(2)}</div>
                 <div className="text-sm text-gray-400">Betslip</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-green-500">${userBets.reduce((sum, bet) => sum + bet.potential_payout, 0).toFixed(2)}</div>
+                <div className="text-2xl font-bold text-green-500">${totalPotentialPayout.toFixed(2)}</div>
                 <div className="text-sm text-gray-400">Potential Payout</div>
               </div>
             </div>

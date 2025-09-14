@@ -77,6 +77,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [userBets, setUserBets] = useState<any[]>([]);
+  const [remainingBalance, setRemainingBalance] = useState<number>(100);
   const [matchupId, setMatchupId] = useState<number>(propMatchupId || 0);
   const [week, setWeek] = useState<number>(propWeek || 1);
 
@@ -95,7 +96,6 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   const totalProfit = totalPotentialPayout - totalBetAmount;
   const budgetUsed = totalBetAmount;
   const budgetPercentage = (budgetUsed / 100) * 100;
-  const remainingBalance = 100 - userBets.reduce((sum, bet) => sum + bet.amount, 0);
 
   useEffect(() => {
     // Load bets and parlay bets from sessionStorage
@@ -142,7 +142,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
     if (parlayBets.length >= 2 && parlayStake === 0) {
       setParlayStake(Math.min(remainingBalance, 10)); // Default to $10 or remaining balance
     }
-  }, [userBets, parlayBets.length, parlayStake, remainingBalance]);
+  }, [remainingBalance, parlayBets.length, parlayStake]);
 
   const loadMatchupData = async () => {
     if (!leagueId) return;
@@ -160,7 +160,14 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   const loadUserBets = async () => {
     try {
       const betsResponse = await apiService.getUserBets(week);
+      console.log('🔍 API Response from getUserBets:', betsResponse);
+      console.log('🔍 Regular bets:', betsResponse.bets);
+      console.log('🔍 Parlay bets:', betsResponse.parlay_bets);
+      console.log('🔍 Total bet amount:', betsResponse.total_bet_amount);
+      console.log('🔍 Remaining balance:', betsResponse.remaining_balance);
+      
       setUserBets(betsResponse.bets);
+      setRemainingBalance(betsResponse.remaining_balance);
     } catch (error) {
       console.error('Failed to load user bets:', error);
     }
@@ -256,10 +263,9 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       // Place regular bets
       if (betslipBets.length > 0) {
         const batchBets = betslipBets.map(betslipBet => ({
-          matchupId: matchupId,
-          bettingOptionId: betslipBet.bettingOption.id,
-          amount: betslipBet.amount,
-          week: week
+          matchup_id: matchupId,
+          betting_option_id: betslipBet.bettingOption.id,
+          amount: betslipBet.amount
         }));
 
         await apiService.placeBatchBets({ bets: batchBets, week });

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { User, Settings, Trophy, TrendingUp, Calendar, DollarSign, Loader2, Plus, Users, Target } from "lucide-react"
+import { User, Settings, Trophy, TrendingUp, Calendar, DollarSign, Loader2, Plus, Users, Target, RefreshCw, CheckCircle, AlertCircle } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { useState, useEffect } from "react"
 import apiService from "@/services/api"
@@ -17,21 +17,35 @@ export default function Profile() {
     activeLeagues: 0,
     totalWinnings: 0,
     bestRecord: "0-0",
-    currentBalance: 100.00,
+    currentBalance: 1000.00,
     winRate: 0,
-    avgWeeklyBalance: 100.00,
+    avgWeeklyBalance: 1000.00,
     longestWinStreak: 0,
-    favoriteBetType: "Moneyline"
+    favoriteBetType: "Moneyline",
+    // New betting stats
+    totalWagered: 0,
+    totalWon: 0,
+    netProfit: 0,
+    roi: 0,
+    straightBets: { total: 0, won: 0, lost: 0, pending: 0 },
+    parlayBets: { total: 0, won: 0, lost: 0, pending: 0 }
   })
   const [userLeagues, setUserLeagues] = useState([])
   const [recentActivity, setRecentActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [validatingBets, setValidatingBets] = useState(false)
+  const [validationStatus, setValidationStatus] = useState<{type: 'success' | 'error' | null, message: string}>({type: null, message: ''})
 
   useEffect(() => {
     const fetchUserStats = async () => {
       try {
         setLoading(true)
+        
+        // Fetch comprehensive betting statistics
+        const bettingStatsResponse = await apiService.getUserBettingStats()
+        const bettingStats = bettingStatsResponse || {}
+        
         // Fetch user's league data
         const leaguesResponse = await apiService.getUserLeagues()
         const leagues = leaguesResponse.leagues || []
@@ -79,11 +93,18 @@ export default function Profile() {
           activeLeagues,
           totalWinnings,
           bestRecord,
-          currentBalance: betsResponse.remaining_balance || 100,
+          currentBalance: (bettingStats as any)?.user?.balance || 1000,
           winRate,
           avgWeeklyBalance,
           longestWinStreak: Math.max(...leagues.map(league => league.longest_win_streak || 0)),
-          favoriteBetType: "Moneyline" // This would need more complex calculation
+          favoriteBetType: "Moneyline", // This would need more complex calculation
+          // Betting statistics from API
+          totalWagered: (bettingStats as any)?.overall?.total_wagered || 0,
+          totalWon: (bettingStats as any)?.overall?.total_won || 0,
+          netProfit: (bettingStats as any)?.overall?.net_profit || 0,
+          roi: (bettingStats as any)?.overall?.roi || 0,
+          straightBets: (bettingStats as any)?.straight_bets || { total: 0, won: 0, lost: 0, pending: 0 },
+          parlayBets: (bettingStats as any)?.parlay_bets || { total: 0, won: 0, lost: 0, pending: 0 }
         })
         
         // Build recent activity from real data
@@ -151,6 +172,49 @@ export default function Profile() {
       fetchUserStats()
     }
   }, [user])
+
+  const handleManualBetValidation = async () => {
+    try {
+      setValidatingBets(true)
+      setValidationStatus({type: null, message: ''})
+      
+      const result = await apiService.runBetValidation() as any
+      
+      if (result?.success) {
+        setValidationStatus({
+          type: 'success',
+          message: `Validation complete! Processed ${result.results?.games_processed || 0} games and settled ${result.results?.bets_evaluated || 0} bets.`
+        })
+        
+        // Refresh user stats to show updated data
+        const bettingStatsResponse = await apiService.getUserBettingStats()
+        const bettingStats = bettingStatsResponse || {}
+        
+        setUserStats(prev => ({
+          ...prev,
+          totalWagered: (bettingStats as any)?.overall?.total_wagered || 0,
+          totalWon: (bettingStats as any)?.overall?.total_won || 0,
+          netProfit: (bettingStats as any)?.overall?.net_profit || 0,
+          roi: (bettingStats as any)?.overall?.roi || 0,
+          straightBets: (bettingStats as any)?.straight_bets || { total: 0, won: 0, lost: 0, pending: 0 },
+          parlayBets: (bettingStats as any)?.parlay_bets || { total: 0, won: 0, lost: 0, pending: 0 }
+        }))
+      } else {
+        setValidationStatus({
+          type: 'error',
+          message: result.error || 'Validation failed. Please try again.'
+        })
+      }
+    } catch (error) {
+      console.error('Manual validation error:', error)
+      setValidationStatus({
+        type: 'error',
+        message: 'Failed to validate bets. Please try again.'
+      })
+    } finally {
+      setValidatingBets(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -257,27 +321,177 @@ export default function Profile() {
                   </Card>
                 </div>
 
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>League Performance</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span>Win Rate</span>
+                          <span className="font-semibold">{userStats.winRate}%</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Average Weekly Balance</span>
+                          <span className="font-semibold">${userStats.avgWeeklyBalance.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Longest Win Streak</span>
+                          <span className="font-semibold">{userStats.longestWinStreak} weeks</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Favorite Bet Type</span>
+                          <span className="font-semibold">{userStats.favoriteBetType}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Betting Statistics</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span>Total Wagered</span>
+                          <span className="font-semibold">${userStats.totalWagered.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Total Won</span>
+                          <span className="font-semibold text-success">${userStats.totalWon.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Net Profit</span>
+                          <span className={`font-semibold ${userStats.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            ${userStats.netProfit.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>ROI</span>
+                          <span className={`font-semibold ${userStats.roi >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {userStats.roi.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Manual Bet Validation Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <RefreshCw className="w-5 h-5" />
+                        Bet Validation
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          Manually check ESPN API for latest game results and validate your pending bets.
+                        </p>
+                        
+                        <Button 
+                          onClick={handleManualBetValidation}
+                          disabled={validatingBets}
+                          className="w-full"
+                          variant="outline"
+                        >
+                          {validatingBets ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Validating Bets...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Check Bet Status
+                            </>
+                          )}
+                        </Button>
+
+                        {validationStatus.type && (
+                          <div className={`flex items-center gap-2 p-3 rounded-md ${
+                            validationStatus.type === 'success' 
+                              ? 'bg-green-50 text-green-700 border border-green-200' 
+                              : 'bg-red-50 text-red-700 border border-red-200'
+                          }`}>
+                            {validationStatus.type === 'success' ? (
+                              <CheckCircle className="w-4 h-4" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4" />
+                            )}
+                            <span className="text-sm">{validationStatus.message}</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
                 <Card>
                   <CardHeader>
-                    <CardTitle>Performance Summary</CardTitle>
+                    <CardTitle>Bet Breakdown</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span>Win Rate</span>
-                        <span className="font-semibold">{userStats.winRate}%</span>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold mb-3">Straight Bets</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span>Total Bets:</span>
+                            <span>{userStats.straightBets.total}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Won:</span>
+                            <span className="text-success">{userStats.straightBets.won}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Lost:</span>
+                            <span className="text-destructive">{userStats.straightBets.lost}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Pending:</span>
+                            <span className="text-muted-foreground">{userStats.straightBets.pending}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Win Rate:</span>
+                            <span className="font-semibold">
+                              {userStats.straightBets.total > 0 ? 
+                                ((userStats.straightBets.won / userStats.straightBets.total) * 100).toFixed(1) : 0}%
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span>Average Weekly Balance</span>
-                        <span className="font-semibold">${userStats.avgWeeklyBalance.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Longest Win Streak</span>
-                        <span className="font-semibold">{userStats.longestWinStreak} weeks</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Favorite Bet Type</span>
-                        <span className="font-semibold">{userStats.favoriteBetType}</span>
+                      
+                      <div>
+                        <h4 className="font-semibold mb-3">Parlay Bets</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span>Total Parlays:</span>
+                            <span>{userStats.parlayBets.total}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Won:</span>
+                            <span className="text-success">{userStats.parlayBets.won}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Lost:</span>
+                            <span className="text-destructive">{userStats.parlayBets.lost}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Pending:</span>
+                            <span className="text-muted-foreground">{userStats.parlayBets.pending}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Win Rate:</span>
+                            <span className="font-semibold">
+                              {userStats.parlayBets.total > 0 ? 
+                                ((userStats.parlayBets.won / userStats.parlayBets.total) * 100).toFixed(1) : 0}%
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronLeft, ChevronRight, Calendar, Clock, Trophy, Target, Eye } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Clock, Trophy, Target, Eye, RefreshCw, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiService } from '@/services/api';
 
 interface MatchupDetail {
@@ -34,7 +34,9 @@ interface BetSummary {
   id: number;
   amount: number;
   potential_payout: number;
+  actual_payout?: number;
   status: 'pending' | 'won' | 'lost' | 'cancelled';
+  outcome?: 'won' | 'lost' | 'pending' | 'cancelled';
   betting_option: {
     id: number;
     outcome_name: string;
@@ -79,10 +81,44 @@ export function ComprehensiveMatchups({
   const [allMatchups, setAllMatchups] = useState<MatchupDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'week' | 'calendar'>('week');
+  const [validatingBets, setValidatingBets] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<{type: 'success' | 'error' | null, message: string}>({type: null, message: ''});
 
   useEffect(() => {
     loadMatchupData();
   }, [leagueId, currentWeek]);
+
+  const handleManualBetValidation = async () => {
+    try {
+      setValidatingBets(true);
+      setValidationStatus({type: null, message: ''});
+      
+      const result = await apiService.runBetValidation() as any;
+      
+      if (result?.success) {
+        setValidationStatus({
+          type: 'success',
+          message: `Validation complete! Processed ${result.results?.games_processed || 0} games and settled ${result.results?.bets_evaluated || 0} bets.`
+        });
+        
+        // Refresh matchup data to show updated bet outcomes
+        await loadMatchupData();
+      } else {
+        setValidationStatus({
+          type: 'error',
+          message: result?.error || 'Validation failed. Please try again.'
+        });
+      }
+    } catch (error) {
+      console.error('Manual validation error:', error);
+      setValidationStatus({
+        type: 'error',
+        message: 'Failed to validate bets. Please try again.'
+      });
+    } finally {
+      setValidatingBets(false);
+    }
+  };
 
   const loadMatchupData = async () => {
     try {
@@ -134,6 +170,51 @@ export function ComprehensiveMatchups({
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
+  };
+
+  const getBetPayoutInfo = (bet: BetSummary) => {
+    // If bet has been evaluated (has outcome), show final payout
+    if (bet.outcome && bet.outcome !== 'pending') {
+      const finalPayout = bet.actual_payout || 0;
+      return {
+        label: 'Final',
+        amount: finalPayout,
+        color: bet.outcome === 'won' ? 'text-green-600' : 'text-red-600'
+      };
+    }
+    
+    // Otherwise show potential payout
+    return {
+      label: 'Potential',
+      amount: bet.potential_payout,
+      color: bet.is_parlay ? 'text-blue-100' : 'text-green-600'
+    };
+  };
+
+  const getUserTotalPayoutInfo = (bets: BetSummary[]) => {
+    const hasEvaluatedBets = bets.some(bet => bet.outcome && bet.outcome !== 'pending');
+    
+    if (hasEvaluatedBets) {
+      const totalFinalPayout = bets.reduce((sum, bet) => {
+        if (bet.outcome && bet.outcome !== 'pending') {
+          return sum + (bet.actual_payout || 0);
+        }
+        return sum + bet.potential_payout;
+      }, 0);
+      
+      return {
+        label: 'Final',
+        amount: totalFinalPayout,
+        color: 'text-green-600'
+      };
+    }
+    
+    const totalPotentialPayout = bets.reduce((sum, bet) => sum + bet.potential_payout, 0);
+    return {
+      label: 'Potential',
+      amount: totalPotentialPayout,
+      color: 'text-green-600'
+    };
   };
 
   const getMarketDisplayName = (marketType: string) => {
@@ -229,7 +310,7 @@ export function ComprehensiveMatchups({
                         Bet: ${matchup.user1_total_bet}
                       </div>
                       <div className="font-semibold text-sm lg:text-base">
-                        Potential: ${matchup.user1_potential_payout.toFixed(2)}
+                        {getUserTotalPayoutInfo(matchup.user1_bets).label}: ${getUserTotalPayoutInfo(matchup.user1_bets).amount.toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -279,8 +360,12 @@ export function ComprehensiveMatchups({
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Potential:</div>
-                              <div className={`font-semibold ${bet.is_parlay ? "text-blue-100" : "text-green-600"}`}>${bet.potential_payout.toFixed(2)}</div>
+                              <div className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>
+                                {getBetPayoutInfo(bet).label}:
+                              </div>
+                              <div className={`font-semibold ${getBetPayoutInfo(bet).color}`}>
+                                ${getBetPayoutInfo(bet).amount.toFixed(2)}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -302,7 +387,7 @@ export function ComprehensiveMatchups({
                         Bet: ${matchup.user2_total_bet}
                       </div>
                       <div className="font-semibold text-sm lg:text-base">
-                        Potential: ${matchup.user2_potential_payout.toFixed(2)}
+                        {getUserTotalPayoutInfo(matchup.user2_bets).label}: ${getUserTotalPayoutInfo(matchup.user2_bets).amount.toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -352,8 +437,12 @@ export function ComprehensiveMatchups({
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Potential:</div>
-                              <div className={`font-semibold ${bet.is_parlay ? "text-blue-100" : "text-green-600"}`}>${bet.potential_payout.toFixed(2)}</div>
+                              <div className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>
+                                {getBetPayoutInfo(bet).label}:
+                              </div>
+                              <div className={`font-semibold ${getBetPayoutInfo(bet).color}`}>
+                                ${getBetPayoutInfo(bet).amount.toFixed(2)}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -474,8 +563,45 @@ export function ComprehensiveMatchups({
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
+            
+            {/* Bet Validation Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualBetValidation}
+              disabled={validatingBets}
+              className="ml-2"
+            >
+              {validatingBets ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Check Bets
+                </>
+              )}
+            </Button>
           </div>
         </div>
+        
+        {/* Validation Status Message */}
+        {validationStatus.type && (
+          <div className={`flex items-center gap-2 p-3 rounded-md mt-4 ${
+            validationStatus.type === 'success' 
+              ? 'bg-green-50 text-green-700 border border-green-200' 
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {validationStatus.type === 'success' ? (
+              <CheckCircle className="w-4 h-4" />
+            ) : (
+              <AlertCircle className="w-4 h-4" />
+            )}
+            <span className="text-sm">{validationStatus.message}</span>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'week' | 'calendar')}>
