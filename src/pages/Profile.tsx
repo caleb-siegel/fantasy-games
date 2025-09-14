@@ -17,18 +17,25 @@ export default function Profile() {
     activeLeagues: 0,
     totalWinnings: 0,
     bestRecord: "0-0",
-    currentBalance: 1000.00,
     winRate: 0,
-    avgWeeklyBalance: 1000.00,
     longestWinStreak: 0,
-    favoriteBetType: "Moneyline",
-    // New betting stats
+    // Real betting stats from API
     totalWagered: 0,
     totalWon: 0,
     netProfit: 0,
-    roi: 0,
-    straightBets: { total: 0, won: 0, lost: 0, pending: 0 },
-    parlayBets: { total: 0, won: 0, lost: 0, pending: 0 }
+    winPercentage: 0,
+    totalBets: 0,
+    wonBets: 0,
+    lostBets: 0,
+    pendingBets: 0,
+    // Current week stats
+    currentWeekBets: 0,
+    currentWeekParlays: 0,
+    currentWeekRemaining: 100,
+    currentWeekWagered: 0,
+    currentWeekRegularWagered: 0,
+    currentWeekParlayWagered: 0,
+    foundWeek: 1
   })
   const [userLeagues, setUserLeagues] = useState([])
   const [recentActivity, setRecentActivity] = useState([])
@@ -53,18 +60,41 @@ export default function Profile() {
         // Store leagues for display
         setUserLeagues(leagues)
         
-        // Fetch user's betting history
-        const betsResponse = await apiService.getUserBets(1) // Current week
-        const bets = betsResponse.bets || []
+        // Try to get betting data for multiple weeks to find where the user has bets
+        let currentWeekData = {}
+        let foundWeek = 1
+        
+        // Try weeks 1-17 to find where user has betting activity
+        for (let week = 1; week <= 17; week++) {
+          try {
+            const betsResponse = await apiService.getUserBets(week)
+            const weekData = betsResponse || {}
+            
+            // Debug logging for each week
+            console.log(`🔍 Week ${week} - Regular bets:`, weekData.bets?.length || 0)
+            console.log(`🔍 Week ${week} - Parlay bets:`, weekData.parlay_bets?.length || 0)
+            console.log(`🔍 Week ${week} - Total wagered:`, weekData.total_bet_amount || 0)
+            
+            // If this week has any betting activity, use it
+            if ((weekData.bets?.length > 0) || (weekData.parlay_bets?.length > 0)) {
+              currentWeekData = weekData
+              foundWeek = week
+              console.log(`✅ Found betting activity in Week ${week}`)
+              break
+            }
+          } catch (error) {
+            console.log(`❌ Error fetching Week ${week}:`, error)
+          }
+        }
+        
+        console.log('🔍 Final Profile Debug - Using Week:', foundWeek)
+        console.log('🔍 Final data:', currentWeekData)
         
         // Calculate stats from real data
         const totalLeagues = leagues.length
-        const activeLeagues = leagues.filter(league => league.is_active).length
+        const activeLeagues = leagues.filter(league => league.is_setup_complete).length
         
-        // Calculate total winnings from all leagues
-        const totalWinnings = leagues.reduce((sum, league) => sum + (league.total_winnings || 0), 0)
-        
-        // Calculate best record
+        // Calculate best record from league standings
         const records = leagues.map(league => league.record || "0-0")
         const bestRecord = records.reduce((best, current) => {
           const [wins, losses] = current.split('-').map(Number)
@@ -72,7 +102,7 @@ export default function Profile() {
           return wins > bestWins || (wins === bestWins && losses < bestLosses) ? current : best
         }, "0-0")
         
-        // Calculate win rate
+        // Calculate overall win rate from league records
         const totalWins = leagues.reduce((sum, league) => {
           const [wins] = (league.record || "0-0").split('-').map(Number)
           return sum + wins
@@ -83,28 +113,42 @@ export default function Profile() {
         }, 0)
         const winRate = totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0
         
-        // Calculate average weekly balance
-        const avgWeeklyBalance = leagues.length > 0 
-          ? leagues.reduce((sum, league) => sum + (league.avg_balance || 100), 0) / leagues.length
-          : 100
+        // Get longest win streak from leagues
+        const longestWinStreak = Math.max(...leagues.map(league => league.longest_win_streak || 0), 0)
+        
+        // Calculate totals from current week data (includes parlays)
+        const totalWageredFromWeek = currentWeekData.total_bet_amount || 0
+        const totalBetsFromWeek = (currentWeekData.bets?.length || 0) + (currentWeekData.parlay_bets?.length || 0)
+        
+        // Calculate pending bets from current week data (includes parlays)
+        const pendingRegularBets = currentWeekData.bets?.filter(bet => bet.outcome === null || bet.outcome === 'pending').length || 0
+        const pendingParlayBets = currentWeekData.parlay_bets?.filter(parlay => parlay.status === 'pending' || parlay.status === 'locked').length || 0
+        const totalPendingBets = pendingRegularBets + pendingParlayBets
         
         setUserStats({
           totalLeagues,
           activeLeagues,
-          totalWinnings,
+          totalWinnings: 0, // This would need to be calculated from actual winnings
           bestRecord,
-          currentBalance: (bettingStats as any)?.user?.balance || 1000,
           winRate,
-          avgWeeklyBalance,
-          longestWinStreak: Math.max(...leagues.map(league => league.longest_win_streak || 0)),
-          favoriteBetType: "Moneyline", // This would need more complex calculation
-          // Betting statistics from API
-          totalWagered: (bettingStats as any)?.overall?.total_wagered || 0,
-          totalWon: (bettingStats as any)?.overall?.total_won || 0,
-          netProfit: (bettingStats as any)?.overall?.net_profit || 0,
-          roi: (bettingStats as any)?.overall?.roi || 0,
-          straightBets: (bettingStats as any)?.straight_bets || { total: 0, won: 0, lost: 0, pending: 0 },
-          parlayBets: (bettingStats as any)?.parlay_bets || { total: 0, won: 0, lost: 0, pending: 0 }
+          longestWinStreak,
+          // Use current week data for betting statistics (includes parlays)
+          totalWagered: totalWageredFromWeek,
+          totalWon: bettingStats.total_won || 0,
+          netProfit: (bettingStats.total_won || 0) - totalWageredFromWeek,
+          winPercentage: bettingStats.win_percentage || 0,
+          totalBets: totalBetsFromWeek,
+          wonBets: bettingStats.won_bets || 0,
+          lostBets: bettingStats.lost_bets || 0,
+          pendingBets: totalPendingBets,
+          // Current week stats
+          currentWeekBets: currentWeekData.bets?.length || 0,
+          currentWeekParlays: currentWeekData.parlay_bets?.length || 0,
+          currentWeekRemaining: currentWeekData.remaining_balance || 100,
+          currentWeekWagered: currentWeekData.total_bet_amount || 0,
+          currentWeekRegularWagered: currentWeekData.total_regular_bet_amount || 0,
+          currentWeekParlayWagered: currentWeekData.total_parlay_bet_amount || 0,
+          foundWeek: foundWeek
         })
         
         // Build recent activity from real data
@@ -115,7 +159,8 @@ export default function Profile() {
           action: "Account created",
           league: "System",
           amount: "",
-          date: user?.created_at ? new Date(user.created_at).toLocaleDateString() : "Recently"
+          date: user?.created_at ? new Date(user.created_at).toLocaleDateString() : "Recently",
+          timestamp: user?.created_at ? new Date(user.created_at).getTime() : Date.now()
         })
         
         // Add league activities
@@ -125,39 +170,41 @@ export default function Profile() {
             action: league.is_commissioner ? "Created league" : "Joined league",
             league: league.name,
             amount: "",
-            date: league.joined_at ? new Date(league.joined_at).toLocaleDateString() : "Recently"
+            date: league.joined_at ? new Date(league.joined_at).toLocaleDateString() : "Recently",
+            timestamp: league.joined_at ? new Date(league.joined_at).getTime() : Date.now()
           })
-          
-          // Add recent betting activity if available
-          if (league.total_winnings > 0) {
-            activity.push({
-              action: "Weekly winnings",
-              league: league.name,
-              amount: `+$${league.total_winnings.toFixed(2)}`,
-              date: "This week"
-            })
-          }
         })
         
-        // Add recent bets activity
-        if (bets.length > 0) {
-          const recentBets = bets.slice(0, 3) // Show last 3 bets
+        // Add recent bets activity from current week (regular bets)
+        if (currentWeekData.bets && currentWeekData.bets.length > 0) {
+          const recentBets = currentWeekData.bets.slice(0, 3) // Show last 3 regular bets
           recentBets.forEach(bet => {
             activity.push({
-              action: `Bet placed on ${bet.team}`,
+              action: `Bet placed on ${bet.betting_option?.outcome_name || 'game'}`,
               league: "Current Week",
               amount: `-$${bet.amount.toFixed(2)}`,
-              date: bet.created_at ? new Date(bet.created_at).toLocaleDateString() : "Recently"
+              date: bet.created_at ? new Date(bet.created_at).toLocaleDateString() : "Recently",
+              timestamp: bet.created_at ? new Date(bet.created_at).getTime() : Date.now()
             })
           })
         }
         
-        // Sort by date (most recent first) and limit to 10 items
-        activity.sort((a, b) => {
-          const dateA = new Date(a.date).getTime()
-          const dateB = new Date(b.date).getTime()
-          return dateB - dateA
-        })
+        // Add recent parlay bets activity from current week
+        if (currentWeekData.parlay_bets && currentWeekData.parlay_bets.length > 0) {
+          const recentParlays = currentWeekData.parlay_bets.slice(0, 2) // Show last 2 parlay bets
+          recentParlays.forEach(parlay => {
+            activity.push({
+              action: `Parlay bet placed (${parlay.legs?.length || 0} legs)`,
+              league: "Current Week",
+              amount: `-$${parlay.amount.toFixed(2)}`,
+              date: parlay.created_at ? new Date(parlay.created_at).toLocaleDateString() : "Recently",
+              timestamp: parlay.created_at ? new Date(parlay.created_at).getTime() : Date.now()
+            })
+          })
+        }
+        
+        // Sort by timestamp (most recent first) and limit to 10 items
+        activity.sort((a, b) => b.timestamp - a.timestamp)
         setRecentActivity(activity.slice(0, 10))
         
       } catch (error) {
@@ -190,14 +237,33 @@ export default function Profile() {
         const bettingStatsResponse = await apiService.getUserBettingStats()
         const bettingStats = bettingStatsResponse || {}
         
+        // Also refresh current week data to get updated parlay info
+        const currentWeekData = await apiService.getUserBets(prev.foundWeek)
+        const totalWageredFromWeek = currentWeekData.total_bet_amount || 0
+        const totalBetsFromWeek = (currentWeekData.bets?.length || 0) + (currentWeekData.parlay_bets?.length || 0)
+        
+        // Calculate pending bets from current week data (includes parlays)
+        const pendingRegularBets = currentWeekData.bets?.filter(bet => bet.outcome === null || bet.outcome === 'pending').length || 0
+        const pendingParlayBets = currentWeekData.parlay_bets?.filter(parlay => parlay.status === 'pending' || parlay.status === 'locked').length || 0
+        const totalPendingBets = pendingRegularBets + pendingParlayBets
+        
         setUserStats(prev => ({
           ...prev,
-          totalWagered: (bettingStats as any)?.overall?.total_wagered || 0,
-          totalWon: (bettingStats as any)?.overall?.total_won || 0,
-          netProfit: (bettingStats as any)?.overall?.net_profit || 0,
-          roi: (bettingStats as any)?.overall?.roi || 0,
-          straightBets: (bettingStats as any)?.straight_bets || { total: 0, won: 0, lost: 0, pending: 0 },
-          parlayBets: (bettingStats as any)?.parlay_bets || { total: 0, won: 0, lost: 0, pending: 0 }
+          totalWagered: totalWageredFromWeek,
+          totalWon: bettingStats.total_won || 0,
+          netProfit: (bettingStats.total_won || 0) - totalWageredFromWeek,
+          winPercentage: bettingStats.win_percentage || 0,
+          totalBets: totalBetsFromWeek,
+          wonBets: bettingStats.won_bets || 0,
+          lostBets: bettingStats.lost_bets || 0,
+          pendingBets: totalPendingBets,
+          // Update current week stats too
+          currentWeekBets: currentWeekData.bets?.length || 0,
+          currentWeekParlays: currentWeekData.parlay_bets?.length || 0,
+          currentWeekRemaining: currentWeekData.remaining_balance || 100,
+          currentWeekWagered: currentWeekData.total_bet_amount || 0,
+          currentWeekRegularWagered: currentWeekData.total_regular_bet_amount || 0,
+          currentWeekParlayWagered: currentWeekData.total_parlay_bet_amount || 0
         }))
       } else {
         setValidationStatus({
@@ -311,12 +377,12 @@ export default function Profile() {
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg flex items-center space-x-2">
                         <DollarSign className="w-5 h-5 text-primary" />
-                        <span>Current Balance</span>
+                        <span>This Week's Balance</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-primary">${userStats.currentBalance.toFixed(2)}</div>
-                      <div className="text-sm text-muted-foreground">This week</div>
+                      <div className="text-2xl font-bold text-primary">${userStats.currentWeekRemaining.toFixed(2)}</div>
+                      <div className="text-sm text-muted-foreground">Remaining of $100</div>
                     </CardContent>
                   </Card>
                 </div>
@@ -329,20 +395,20 @@ export default function Profile() {
                     <CardContent>
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                          <span>Win Rate</span>
+                          <span>Overall Win Rate</span>
                           <span className="font-semibold">{userStats.winRate}%</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span>Average Weekly Balance</span>
-                          <span className="font-semibold">${userStats.avgWeeklyBalance.toFixed(2)}</span>
+                          <span>This Week Wagered</span>
+                          <span className="font-semibold">${userStats.currentWeekWagered.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span>Longest Win Streak</span>
                           <span className="font-semibold">{userStats.longestWinStreak} weeks</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span>Favorite Bet Type</span>
-                          <span className="font-semibold">{userStats.favoriteBetType}</span>
+                          <span>Week {userStats.foundWeek} Bets</span>
+                          <span className="font-semibold">{userStats.currentWeekBets + userStats.currentWeekParlays}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -369,10 +435,8 @@ export default function Profile() {
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span>ROI</span>
-                          <span className={`font-semibold ${userStats.roi >= 0 ? 'text-success' : 'text-destructive'}`}>
-                            {userStats.roi.toFixed(1)}%
-                          </span>
+                          <span>Bet Win Rate</span>
+                          <span className="font-semibold">{userStats.winPercentage.toFixed(1)}%</span>
                         </div>
                       </div>
                     </CardContent>
@@ -437,58 +501,54 @@ export default function Profile() {
                   <CardContent>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <h4 className="font-semibold mb-3">Straight Bets</h4>
+                        <h4 className="font-semibold mb-3">All Bets</h4>
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span>Total Bets:</span>
-                            <span>{userStats.straightBets.total}</span>
+                            <span>{userStats.totalBets}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Won:</span>
-                            <span className="text-success">{userStats.straightBets.won}</span>
+                            <span className="text-success">{userStats.wonBets}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Lost:</span>
-                            <span className="text-destructive">{userStats.straightBets.lost}</span>
+                            <span className="text-destructive">{userStats.lostBets}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Pending:</span>
-                            <span className="text-muted-foreground">{userStats.straightBets.pending}</span>
+                            <span className="text-muted-foreground">{userStats.pendingBets}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Win Rate:</span>
-                            <span className="font-semibold">
-                              {userStats.straightBets.total > 0 ? 
-                                ((userStats.straightBets.won / userStats.straightBets.total) * 100).toFixed(1) : 0}%
-                            </span>
+                            <span className="font-semibold">{userStats.winPercentage.toFixed(1)}%</span>
                           </div>
                         </div>
                       </div>
                       
                       <div>
-                        <h4 className="font-semibold mb-3">Parlay Bets</h4>
+                        <h4 className="font-semibold mb-3">Week {userStats.foundWeek}</h4>
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span>Total Parlays:</span>
-                            <span>{userStats.parlayBets.total}</span>
+                            <span>Regular Bets:</span>
+                            <span>{userStats.currentWeekBets}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Won:</span>
-                            <span className="text-success">{userStats.parlayBets.won}</span>
+                            <span>Parlay Bets:</span>
+                            <span>{userStats.currentWeekParlays}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Lost:</span>
-                            <span className="text-destructive">{userStats.parlayBets.lost}</span>
+                            <span>Total Wagered:</span>
+                            <span>${userStats.currentWeekWagered.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Pending:</span>
-                            <span className="text-muted-foreground">{userStats.parlayBets.pending}</span>
+                            <span>Remaining:</span>
+                            <span className="text-success">${userStats.currentWeekRemaining.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Win Rate:</span>
+                            <span>Budget Used:</span>
                             <span className="font-semibold">
-                              {userStats.parlayBets.total > 0 ? 
-                                ((userStats.parlayBets.won / userStats.parlayBets.total) * 100).toFixed(1) : 0}%
+                              {((100 - userStats.currentWeekRemaining) / 100 * 100).toFixed(1)}%
                             </span>
                           </div>
                         </div>
@@ -532,6 +592,10 @@ export default function Profile() {
                         Icon = Target
                         iconColor = "text-orange-500"
                         bgColor = "bg-orange-100"
+                      } else if (activity.action.includes("Parlay bet placed")) {
+                        Icon = Target
+                        iconColor = "text-purple-500"
+                        bgColor = "bg-purple-100"
                       } else if (activity.action.includes("winnings")) {
                         Icon = DollarSign
                         iconColor = "text-green-500"

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Navigation } from '@/components/ui/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
+import { apiService } from '@/services/api';
 
 interface PlayerProfile {
   id: number;
@@ -42,6 +44,12 @@ interface PlayerProfile {
   total_bets_placed: number;
   win_streak_type: 'win' | 'loss' | 'none';
   win_percentage: number;
+  // Parlay stats
+  parlay_bets_won: number;
+  parlay_bets_lost: number;
+  parlay_bets_pending: number;
+  total_parlay_bets_placed: number;
+  parlay_win_percentage: number;
   // Recent performance
   recent_weeks: WeekPerformance[];
   head_to_head: HeadToHeadRecord[];
@@ -80,15 +88,54 @@ export function PlayerProfile() {
   const loadPlayerProfile = async () => {
     try {
       setLoading(true);
-      console.log('Loading player profile for league:', leagueId, 'user:', userId);
-      
       // Get real player profile data from API
-      const response = await apiService.getPlayerProfile(leagueId, userId);
-      console.log('Player profile response:', response);
-      console.log('Response type:', typeof response);
-      console.log('Response.profile:', response.profile);
-      console.log('Response keys:', Object.keys(response));
-      setProfile(response.profile);
+      const response = await apiService.getPlayerProfile(leagueId, userId) as { profile: PlayerProfile };
+      
+      // Get parlay bet statistics for recent weeks (current week and prior 4 weeks)
+      const currentWeek = 1; // For now, hardcode to 1. In production, this would be dynamic
+      const parlayStats = {
+        parlay_bets_won: 0,
+        parlay_bets_lost: 0,
+        parlay_bets_pending: 0,
+        total_parlay_bets_placed: 0,
+        parlay_win_percentage: 0
+      };
+      
+      // Fetch parlay data for recent weeks
+      for (let week = Math.max(1, currentWeek - 4); week <= currentWeek; week++) {
+        try {
+          const parlayResponse = await apiService.getUserParlayBets(week) as { parlay_bets: any[] };
+          const parlayBets = parlayResponse.parlay_bets || [];
+          
+          parlayStats.total_parlay_bets_placed += parlayBets.length;
+          parlayStats.parlay_bets_won += parlayBets.filter((bet: any) => bet.status === 'won').length;
+          parlayStats.parlay_bets_lost += parlayBets.filter((bet: any) => bet.status === 'lost').length;
+          parlayStats.parlay_bets_pending += parlayBets.filter((bet: any) => bet.status === 'pending').length;
+        } catch (error) {
+          // No parlay data for this week
+        }
+      }
+      
+      // Calculate parlay win percentage
+      const settledParlayBets = parlayStats.parlay_bets_won + parlayStats.parlay_bets_lost;
+      parlayStats.parlay_win_percentage = settledParlayBets > 0 
+        ? (parlayStats.parlay_bets_won / settledParlayBets) * 100 
+        : 0;
+      
+      // Filter recent weeks to show current week and prior weeks only
+      const filteredRecentWeeks = response.profile.recent_weeks
+        .filter(week => week.week <= currentWeek)
+        .sort((a, b) => b.week - a.week)
+        .slice(0, 5); // Show last 5 weeks
+      
+      // Combine profile data with parlay stats
+      const enhancedProfile = {
+        ...response.profile,
+        ...parlayStats,
+        recent_weeks: filteredRecentWeeks
+      };
+      
+      setProfile(enhancedProfile);
     } catch (error) {
       console.error('Failed to load player profile:', error);
     } finally {
@@ -116,6 +163,7 @@ export function PlayerProfile() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
+        <Navigation />
         <div className="container mx-auto px-4 py-6">
           <Card>
             <CardContent className="p-8 text-center">
@@ -130,6 +178,7 @@ export function PlayerProfile() {
   if (!profile) {
     return (
       <div className="min-h-screen bg-background">
+        <Navigation />
         <div className="container mx-auto px-4 py-6">
           <Card>
             <CardContent className="p-8 text-center">
@@ -145,6 +194,7 @@ export function PlayerProfile() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Navigation />
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
@@ -334,7 +384,7 @@ export function PlayerProfile() {
           </TabsContent>
 
           <TabsContent value="detailed" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Betting Statistics</CardTitle>
@@ -360,6 +410,36 @@ export function PlayerProfile() {
                     <span className="text-muted-foreground">Bet Win Rate</span>
                     <span className="font-semibold">
                       {((profile.bets_won / profile.total_bets_placed) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Parlay Statistics</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Parlay Bets</span>
+                    <span className="font-semibold">{profile.total_parlay_bets_placed}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Parlay Bets Won</span>
+                    <span className="font-semibold text-green-600">{profile.parlay_bets_won}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Parlay Bets Lost</span>
+                    <span className="font-semibold text-red-600">{profile.parlay_bets_lost}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Parlay Bets Pending</span>
+                    <span className="font-semibold text-yellow-600">{profile.parlay_bets_pending}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Parlay Win Rate</span>
+                    <span className="font-semibold">
+                      {profile.parlay_win_percentage.toFixed(1)}%
                     </span>
                   </div>
                 </CardContent>

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, ShoppingCart, ArrowRight, ChevronDown, ChevronUp, Calculator, Plus } from 'lucide-react';
+import { X, ShoppingCart, ArrowRight, ChevronDown, ChevronUp, Calculator, Plus, Clock } from 'lucide-react';
 import { BettingOption as ParlayBettingOption, calculateParlayFromOptions, formatAmericanOdds, getOutcomeDisplayName, getMarketDisplayName } from '@/utils/parlayUtils';
+import { getCompactGameDateTime } from '@/utils/dateUtils';
 
 interface BettingOption {
   id: number;
@@ -253,6 +254,10 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
                         <div className="text-xs text-gray-500">
                           ${bet.amount} • {bet.bettingOption.bookmaker}
                         </div>
+                        <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {getCompactGameDateTime(bet.gameInfo.start_time)}
+                        </div>
                       </div>
                       <Button
                         variant="ghost"
@@ -416,6 +421,10 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
                           </div>
                           <div className="text-xs text-gray-500">
                             ${bet.amount} • {bet.bettingOption.bookmaker}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {getCompactGameDateTime(bet.gameInfo.start_time)}
                           </div>
                         </div>
                         <Button

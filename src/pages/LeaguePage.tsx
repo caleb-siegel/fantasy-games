@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, Users, Trophy, Calendar, Settings, Target, BarChart3, RefreshCw, ArrowLeft, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Trophy, Calendar, Settings, Target, BarChart3, RefreshCw } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeagueMembership } from '@/hooks/useLeagueMembership';
@@ -91,8 +91,6 @@ export default function LeaguePage() {
   const loadLeagueData = async () => {
     if (!leagueId) return;
     
-    console.log('Loading league data for leagueId:', leagueId);
-    
     try {
       setLoading(true);
       
@@ -112,8 +110,6 @@ export default function LeaguePage() {
   const loadMatchupData = async () => {
     if (!league) return;
     
-    console.log('Loading matchup data for league:', league.id, 'week:', currentWeek);
-    
     try {
       const matchupResponse = await apiService.getUserMatchup(league.id, currentWeek);
       setCurrentMatchup(matchupResponse.matchup);
@@ -125,8 +121,6 @@ export default function LeaguePage() {
 
   const loadStandings = async () => {
     if (!league) return;
-    
-    console.log('Loading standings for league:', league.id);
     
     try {
       const standingsResponse = await apiService.getLeagueStandings(league.id);
@@ -207,16 +201,6 @@ export default function LeaguePage() {
       <Navigation />
       
       <div className="container mx-auto px-4 py-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/leagues')} className="p-0 h-auto">
-            <Home className="h-4 w-4 mr-1" />
-            Leagues
-          </Button>
-          <ChevronRight className="h-4 w-4" />
-          <span className="font-medium">{league.name}</span>
-        </div>
-
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
           <div>
@@ -312,26 +296,22 @@ export default function LeaguePage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-            <TabsTrigger value="overview" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-              <BarChart3 className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="hidden sm:inline">Overview</span>
-              <span className="sm:hidden">Overview</span>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview" className="flex items-center justify-center gap-1 text-xs px-1 sm:px-2 lg:px-3">
+              <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="truncate">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="matchups" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-              <Calendar className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="hidden sm:inline">Matchups</span>
-              <span className="sm:hidden">Matchups</span>
+            <TabsTrigger value="matchups" className="flex items-center justify-center gap-1 text-xs px-1 sm:px-2 lg:px-3">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="truncate">Matchups</span>
             </TabsTrigger>
-            <TabsTrigger value="standings" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-              <Trophy className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="hidden sm:inline">Standings</span>
-              <span className="sm:hidden">Standings</span>
+            <TabsTrigger value="standings" className="flex items-center justify-center gap-1 text-xs px-1 sm:px-2 lg:px-3">
+              <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="truncate">Standings</span>
             </TabsTrigger>
-            <TabsTrigger value="betting" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-              <Target className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="hidden sm:inline">Betting</span>
-              <span className="sm:hidden">Betting</span>
+            <TabsTrigger value="betting" className="flex items-center justify-center gap-1 text-xs px-1 sm:px-2 lg:px-3">
+              <Target className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="truncate">Betting</span>
             </TabsTrigger>
           </TabsList>
 

@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronLeft, ChevronRight, Calendar, Clock, Trophy, Target, Eye, RefreshCw, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiService } from '@/services/api';
+import { formatGameDateTime, getCompactGameDateTime } from '@/utils/dateUtils';
 
 interface MatchupDetail {
   id: number;
@@ -328,6 +329,10 @@ export function ComprehensiveMatchups({
                                 <div className="text-xs text-blue-300 truncate">
                                   {formatBetDescription(bet)}
                                 </div>
+                                <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {getCompactGameDateTime(bet.game.start_time)}
+                                </div>
                                 {bet.is_parlay && bet.parlay_legs && (
                                   <div className="space-y-2 mt-2">
                                     {bet.parlay_legs.map((leg: any, index: number) => (
@@ -338,6 +343,12 @@ export function ComprehensiveMatchups({
                                         <div className="text-blue-300">
                                           {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker || 'Multiple'}
                                         </div>
+                                        {leg.gameInfo?.start_time && (
+                                          <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
+                                            <Clock className="h-3 w-3" />
+                                            {getCompactGameDateTime(leg.gameInfo.start_time)}
+                                          </div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -405,6 +416,10 @@ export function ComprehensiveMatchups({
                                 <div className="text-xs text-blue-300 truncate">
                                   {formatBetDescription(bet)}
                                 </div>
+                                <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {getCompactGameDateTime(bet.game.start_time)}
+                                </div>
                                 {bet.is_parlay && bet.parlay_legs && (
                                   <div className="space-y-2 mt-2">
                                     {bet.parlay_legs.map((leg: any, index: number) => (
@@ -415,6 +430,12 @@ export function ComprehensiveMatchups({
                                         <div className="text-blue-300">
                                           {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker || 'Multiple'}
                                         </div>
+                                        {leg.gameInfo?.start_time && (
+                                          <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
+                                            <Clock className="h-3 w-3" />
+                                            {getCompactGameDateTime(leg.gameInfo.start_time)}
+                                          </div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>

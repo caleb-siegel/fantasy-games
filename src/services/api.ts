@@ -114,7 +114,8 @@ class ApiService {
   }
 
   async getLeague(leagueId: number) {
-    return this.request<{ league: any }>(`/api/leagues/${leagueId}`);
+    const result = await this.request<{ league: any }>(`/api/leagues/${leagueId}`);
+    return result;
   }
 
   async getLeagueStandings(leagueId: number) {
@@ -334,7 +335,8 @@ class ApiService {
 
   // Player Profile API
   async getPlayerProfile(leagueId: number, userId: number) {
-    return this.request(`/api/leagues/${leagueId}/players/${userId}`);
+    const result = await this.request(`/api/leagues/${leagueId}/players/${userId}`);
+    return result;
   }
 
   async getPlayerStats(leagueId: number, userId: number) {

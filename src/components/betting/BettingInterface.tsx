@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CompactBetslip } from './CompactBetslip';
 import { BettingOption as ParlayBettingOption, calculateParlayFromOptions } from '@/utils/parlayUtils';
 import { toast } from 'sonner';
+import { getDetailedGameDateTime } from '@/utils/dateUtils';
 
 interface BettingOption {
   id: number;
@@ -207,15 +208,8 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
   const navigateToBettingReview = () => {
     // Store bets and parlay bets in sessionStorage to pass to the review page
-    console.log('🚀 BettingInterface: Storing to sessionStorage');
-    console.log('Betslip bets:', betslipBets);
-    console.log('Parlay bets:', parlayBets);
-    
     sessionStorage.setItem('betslipBets', JSON.stringify(betslipBets));
     sessionStorage.setItem('parlayBets', JSON.stringify(parlayBets));
-    
-    console.log('✅ Stored betslipBets:', sessionStorage.getItem('betslipBets'));
-    console.log('✅ Stored parlayBets:', sessionStorage.getItem('parlayBets'));
     
     navigate(`/leagues/${leagueId}/betting-review`);
   };
@@ -248,7 +242,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
     setParlayBets(prev => {
       const newParlayBets = [...prev, parlayOption];
-      console.log('🎯 Adding to parlay, new parlay bets:', newParlayBets);
       return newParlayBets;
     });
     toast.success('Added to parlay');
@@ -368,7 +361,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 text-sm text-gray-400 font-medium">
                   <Clock className="h-4 w-4" />
-                  {new Date(gameWithOptions.game.start_time).toLocaleString()}
+                  {getDetailedGameDateTime(gameWithOptions.game.start_time)}
                 </div>
                 {expandedGames.has(gameWithOptions.game.id) ? (
                   <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -673,7 +666,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
         {/* Right side: Desktop betslip */}
         <div className="w-80 flex-shrink-0">
-          <div className="sticky top-20 space-y-4">
+          <div className="sticky top-24 space-y-4">
             <CompactBetslip
               bets={betslipBets}
               parlayBets={parlayBets}
@@ -700,22 +693,22 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-4 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-green-600">${remainingBalance.toFixed(2)}</div>
-                <div className="text-sm text-gray-400">Remaining</div>
+            <div className="grid grid-cols-4 gap-2 sm:gap-3 lg:gap-4 text-center">
+              <div className="px-1">
+                <div className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold text-green-600 truncate">${remainingBalance.toFixed(2)}</div>
+                <div className="text-xs text-gray-400 truncate">Remaining</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-green-400">${totalBetAmount.toFixed(2)}</div>
-                <div className="text-sm text-gray-400">Placed</div>
+              <div className="px-1">
+                <div className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold text-green-400 truncate">${totalBetAmount.toFixed(2)}</div>
+                <div className="text-xs text-gray-400 truncate">Placed</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-blue-400">${totalBetslipAmount.toFixed(2)}</div>
-                <div className="text-sm text-gray-400">Betslip</div>
+              <div className="px-1">
+                <div className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold text-blue-400 truncate">${totalBetslipAmount.toFixed(2)}</div>
+                <div className="text-xs text-gray-400 truncate">Betslip</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-green-500">${totalPotentialPayout.toFixed(2)}</div>
-                <div className="text-sm text-gray-400">Potential Payout</div>
+              <div className="px-1">
+                <div className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold text-green-500 truncate">${totalPotentialPayout.toFixed(2)}</div>
+                <div className="text-xs text-gray-400 truncate">Potential Payout</div>
               </div>
             </div>
           </CardContent>

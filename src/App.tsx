@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LeagueMembershipProvider } from "@/hooks/useLeagueMembership";
+import { LeagueContextProvider } from "@/hooks/useLeagueContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Betting from "./pages/Betting";
@@ -36,11 +37,31 @@ const App = () => (
               <Route path="/betting" element={<Navigate to="/leagues" replace />} />
               <Route path="/standings" element={<Navigate to="/leagues" replace />} />
               <Route path="/leagues" element={<ProtectedRoute requireLeague={false}><Leagues /></ProtectedRoute>} />
-              <Route path="/leagues/:leagueId" element={<ProtectedRoute requireLeague={true}><LeaguePage /></ProtectedRoute>} />
-              <Route path="/leagues/:leagueId/settings" element={<ProtectedRoute requireLeague={true}><LeagueSettings /></ProtectedRoute>} />
-              <Route path="/leagues/:leagueId/matchup" element={<ProtectedRoute requireLeague={true}><WeeklyMatchup /></ProtectedRoute>} />
-              <Route path="/leagues/:leagueId/betting-review" element={<ProtectedRoute requireLeague={true}><BettingReview /></ProtectedRoute>} />
-              <Route path="/leagues/:leagueId/players/:userId" element={<ProtectedRoute requireLeague={true}><PlayerProfile /></ProtectedRoute>} />
+              <Route path="/leagues/:leagueId" element={
+                <LeagueContextProvider>
+                  <ProtectedRoute requireLeague={true}><LeaguePage /></ProtectedRoute>
+                </LeagueContextProvider>
+              } />
+              <Route path="/leagues/:leagueId/settings" element={
+                <LeagueContextProvider>
+                  <ProtectedRoute requireLeague={true}><LeagueSettings /></ProtectedRoute>
+                </LeagueContextProvider>
+              } />
+              <Route path="/leagues/:leagueId/matchup" element={
+                <LeagueContextProvider>
+                  <ProtectedRoute requireLeague={true}><WeeklyMatchup /></ProtectedRoute>
+                </LeagueContextProvider>
+              } />
+              <Route path="/leagues/:leagueId/betting-review" element={
+                <LeagueContextProvider>
+                  <ProtectedRoute requireLeague={true}><BettingReview /></ProtectedRoute>
+                </LeagueContextProvider>
+              } />
+              <Route path="/leagues/:leagueId/players/:userId" element={
+                <LeagueContextProvider>
+                  <ProtectedRoute requireLeague={true}><PlayerProfile /></ProtectedRoute>
+                </LeagueContextProvider>
+              } />
               <Route path="/profile" element={<ProtectedRoute requireLeague={false}><Profile /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
