@@ -103,6 +103,13 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
   const betslipTotalAmount = betslipBets.reduce((sum, bet) => sum + bet.amount, 0);
   
+  // Helper function to check if a game is locked (has started)
+  const isGameLocked = (startTime: string) => {
+    const gameStartTime = new Date(startTime);
+    const now = new Date();
+    return now >= gameStartTime;
+  };
+  
   // Calculate parlay stake for betslip display
   const parlayCalculation = parlayBets.length >= 2 ? calculateParlayFromOptions(10, parlayBets) : null;
   const parlayStakeAmount = parlayCalculation ? parlayCalculation.stake : 0;
@@ -361,7 +368,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 text-sm text-gray-400 font-medium">
                   <Clock className="h-4 w-4" />
-                  {getDetailedGameDateTime(gameWithOptions.game.start_time)}
+                  {getDetailedGameDateTime(gameWithOptions.game.start_time, user?.timezone || 'America/New_York')}
                 </div>
                 {expandedGames.has(gameWithOptions.game.id) ? (
                   <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -416,58 +423,79 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
                                   {outcome.bookmakers.length > 0 && (
                                     <>
                                       <div className="flex flex-row gap-1">
-                                        <Button
-                                          size="sm"
-                                          className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 text-sm"
-                                          onClick={() => {
-                                            const bestOdds = findBestOdds(outcome.bookmakers);
-                                            if (bestOdds) {
-                                              addToBetslip({
-                                                id: bestOdds.id,
-                                                game_id: gameWithOptions.game.id,
-                                                market_type: marketType,
-                                                outcome_name: outcome.outcome_name,
-                                                outcome_point: outcome.outcome_point,
-                                                bookmaker: bestOdds.bookmaker,
-                                                american_odds: bestOdds.american_odds,
-                                                decimal_odds: bestOdds.decimal_odds
-                                              }, {
-                                                home_team: gameWithOptions.game.home_team,
-                                                away_team: gameWithOptions.game.away_team,
-                                                start_time: gameWithOptions.game.start_time
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          {formatOdds(findBestOdds(outcome.bookmakers)?.american_odds || 0)}
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 px-2 py-1 text-xs"
-                                          onClick={() => {
-                                            const bestOdds = findBestOdds(outcome.bookmakers);
-                                            if (bestOdds) {
-                                              addToParlay({
-                                                id: bestOdds.id,
-                                                game_id: gameWithOptions.game.id,
-                                                market_type: marketType,
-                                                outcome_name: outcome.outcome_name,
-                                                outcome_point: outcome.outcome_point,
-                                                bookmaker: bestOdds.bookmaker,
-                                                american_odds: bestOdds.american_odds,
-                                                decimal_odds: bestOdds.decimal_odds,
-                                                is_locked: false
-                                              }, {
-                                                home_team: gameWithOptions.game.home_team,
-                                                away_team: gameWithOptions.game.away_team,
-                                                start_time: gameWithOptions.game.start_time
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          Parlay
-                                        </Button>
+                                        {isGameLocked(gameWithOptions.game.start_time) ? (
+                                          <Button
+                                            size="sm"
+                                            disabled
+                                            className="bg-gray-500 text-gray-300 font-bold px-3 py-1 text-sm cursor-not-allowed"
+                                          >
+                                            LOCKED
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            size="sm"
+                                            className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 text-sm"
+                                            onClick={() => {
+                                              const bestOdds = findBestOdds(outcome.bookmakers);
+                                              if (bestOdds) {
+                                                addToBetslip({
+                                                  id: bestOdds.id,
+                                                  game_id: gameWithOptions.game.id,
+                                                  market_type: marketType,
+                                                  outcome_name: outcome.outcome_name,
+                                                  outcome_point: outcome.outcome_point,
+                                                  bookmaker: bestOdds.bookmaker,
+                                                  american_odds: bestOdds.american_odds,
+                                                  decimal_odds: bestOdds.decimal_odds
+                                                }, {
+                                                  home_team: gameWithOptions.game.home_team,
+                                                  away_team: gameWithOptions.game.away_team,
+                                                  start_time: gameWithOptions.game.start_time
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            {formatOdds(findBestOdds(outcome.bookmakers)?.american_odds || 0)}
+                                          </Button>
+                                        )}
+                                        {isGameLocked(gameWithOptions.game.start_time) ? (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled
+                                            className="bg-gray-500 text-gray-300 border-gray-500 px-2 py-1 text-xs cursor-not-allowed"
+                                          >
+                                            LOCKED
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 px-2 py-1 text-xs"
+                                            onClick={() => {
+                                              const bestOdds = findBestOdds(outcome.bookmakers);
+                                              if (bestOdds) {
+                                                addToParlay({
+                                                  id: bestOdds.id,
+                                                  game_id: gameWithOptions.game.id,
+                                                  market_type: marketType,
+                                                  outcome_name: outcome.outcome_name,
+                                                  outcome_point: outcome.outcome_point,
+                                                  bookmaker: bestOdds.bookmaker,
+                                                  american_odds: bestOdds.american_odds,
+                                                  decimal_odds: bestOdds.decimal_odds,
+                                                  is_locked: false
+                                                }, {
+                                                  home_team: gameWithOptions.game.home_team,
+                                                  away_team: gameWithOptions.game.away_team,
+                                                  start_time: gameWithOptions.game.start_time
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            Parlay
+                                          </Button>
+                                        )}
                                       </div>
                                       {outcome.bookmakers.length > 1 && (
                                         <Button
@@ -521,58 +549,79 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
                                   {outcome.bookmakers.length > 0 && (
                                     <>
                                       <div className="flex flex-row gap-1">
-                                        <Button
-                                          size="sm"
-                                          className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 text-sm"
-                                          onClick={() => {
-                                            const bestOdds = findBestOdds(outcome.bookmakers);
-                                            if (bestOdds) {
-                                              addToBetslip({
-                                                id: bestOdds.id,
-                                                game_id: gameWithOptions.game.id,
-                                                market_type: marketType,
-                                                outcome_name: outcome.outcome_name,
-                                                outcome_point: outcome.outcome_point,
-                                                bookmaker: bestOdds.bookmaker,
-                                                american_odds: bestOdds.american_odds,
-                                                decimal_odds: bestOdds.decimal_odds
-                                              }, {
-                                                home_team: gameWithOptions.game.home_team,
-                                                away_team: gameWithOptions.game.away_team,
-                                                start_time: gameWithOptions.game.start_time
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          {formatOdds(findBestOdds(outcome.bookmakers)?.american_odds || 0)}
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 px-2 py-1 text-xs"
-                                          onClick={() => {
-                                            const bestOdds = findBestOdds(outcome.bookmakers);
-                                            if (bestOdds) {
-                                              addToParlay({
-                                                id: bestOdds.id,
-                                                game_id: gameWithOptions.game.id,
-                                                market_type: marketType,
-                                                outcome_name: outcome.outcome_name,
-                                                outcome_point: outcome.outcome_point,
-                                                bookmaker: bestOdds.bookmaker,
-                                                american_odds: bestOdds.american_odds,
-                                                decimal_odds: bestOdds.decimal_odds,
-                                                is_locked: false
-                                              }, {
-                                                home_team: gameWithOptions.game.home_team,
-                                                away_team: gameWithOptions.game.away_team,
-                                                start_time: gameWithOptions.game.start_time
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          Parlay
-                                        </Button>
+                                        {isGameLocked(gameWithOptions.game.start_time) ? (
+                                          <Button
+                                            size="sm"
+                                            disabled
+                                            className="bg-gray-500 text-gray-300 font-bold px-3 py-1 text-sm cursor-not-allowed"
+                                          >
+                                            LOCKED
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            size="sm"
+                                            className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 text-sm"
+                                            onClick={() => {
+                                              const bestOdds = findBestOdds(outcome.bookmakers);
+                                              if (bestOdds) {
+                                                addToBetslip({
+                                                  id: bestOdds.id,
+                                                  game_id: gameWithOptions.game.id,
+                                                  market_type: marketType,
+                                                  outcome_name: outcome.outcome_name,
+                                                  outcome_point: outcome.outcome_point,
+                                                  bookmaker: bestOdds.bookmaker,
+                                                  american_odds: bestOdds.american_odds,
+                                                  decimal_odds: bestOdds.decimal_odds
+                                                }, {
+                                                  home_team: gameWithOptions.game.home_team,
+                                                  away_team: gameWithOptions.game.away_team,
+                                                  start_time: gameWithOptions.game.start_time
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            {formatOdds(findBestOdds(outcome.bookmakers)?.american_odds || 0)}
+                                          </Button>
+                                        )}
+                                        {isGameLocked(gameWithOptions.game.start_time) ? (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled
+                                            className="bg-gray-500 text-gray-300 border-gray-500 px-2 py-1 text-xs cursor-not-allowed"
+                                          >
+                                            LOCKED
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 px-2 py-1 text-xs"
+                                            onClick={() => {
+                                              const bestOdds = findBestOdds(outcome.bookmakers);
+                                              if (bestOdds) {
+                                                addToParlay({
+                                                  id: bestOdds.id,
+                                                  game_id: gameWithOptions.game.id,
+                                                  market_type: marketType,
+                                                  outcome_name: outcome.outcome_name,
+                                                  outcome_point: outcome.outcome_point,
+                                                  bookmaker: bestOdds.bookmaker,
+                                                  american_odds: bestOdds.american_odds,
+                                                  decimal_odds: bestOdds.decimal_odds,
+                                                  is_locked: false
+                                                }, {
+                                                  home_team: gameWithOptions.game.home_team,
+                                                  away_team: gameWithOptions.game.away_team,
+                                                  start_time: gameWithOptions.game.start_time
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            Parlay
+                                          </Button>
+                                        )}
                                       </div>
                                       {outcome.bookmakers.length > 1 && (
                                         <Button

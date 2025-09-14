@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +20,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
   const [formData, setFormData] = useState({
     username: user?.username || '',
     email: user?.email || '',
+    timezone: user?.timezone || 'America/New_York',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,6 +57,23 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
     }));
   };
 
+  const handleTimezoneChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      timezone: value,
+    }));
+  };
+
+  // Common timezones for US users
+  const timezones = [
+    { value: 'America/New_York', label: 'Eastern Time (ET)' },
+    { value: 'America/Chicago', label: 'Central Time (CT)' },
+    { value: 'America/Denver', label: 'Mountain Time (MT)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+    { value: 'America/Anchorage', label: 'Alaska Time (AKT)' },
+    { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)' },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -90,6 +109,22 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
               placeholder="Enter your email"
               required
             />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="timezone">Timezone</Label>
+            <Select value={formData.timezone} onValueChange={handleTimezoneChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select your timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                {timezones.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <DialogFooter>

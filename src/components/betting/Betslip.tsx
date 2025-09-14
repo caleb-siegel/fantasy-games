@@ -50,6 +50,13 @@ export const Betslip: React.FC<BetslipProps> = ({
     return americanOdds > 0 ? `+${americanOdds}` : americanOdds.toString();
   };
 
+  // Helper function to check if a bet is locked (game has started)
+  const isBetLocked = (bet: BetslipBet) => {
+    const gameStartTime = new Date(bet.gameInfo.start_time);
+    const now = new Date();
+    return now >= gameStartTime;
+  };
+
   const getMarketDisplayName = (marketType: string) => {
     switch (marketType) {
       case 'h2h': return 'Moneyline';
@@ -211,29 +218,38 @@ export const Betslip: React.FC<BetslipProps> = ({
                 </div>
               ) : (
                 <div className="flex gap-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pb-2">
-                  {bets.map((bet, index) => (
-                    <div key={index} className="bg-gray-800 border border-gray-700 rounded-lg p-3 min-w-64 flex-shrink-0">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-white text-sm truncate">
-                            {bet.gameInfo.away_team} @ {bet.gameInfo.home_team}
+                  {bets.map((bet, index) => {
+                    const locked = isBetLocked(bet);
+                    return (
+                      <div key={index} className={`bg-gray-800 border ${locked ? 'border-red-500' : 'border-gray-700'} rounded-lg p-3 min-w-64 flex-shrink-0`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-white text-sm truncate">
+                              {bet.gameInfo.away_team} @ {bet.gameInfo.home_team}
+                            </div>
+                            <div className="text-xs text-gray-400 truncate">
+                              {getOutcomeDisplayName(bet)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {bet.bettingOption.bookmaker} • {formatOdds(bet.bettingOption.american_odds)}
+                            </div>
+                            {locked && (
+                              <div className="text-xs text-red-400 font-semibold mt-1">
+                                🔒 LOCKED - Game Started
+                              </div>
+                            )}
                           </div>
-                          <div className="text-xs text-gray-400 truncate">
-                            {getOutcomeDisplayName(bet)}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {bet.bettingOption.bookmaker} • {formatOdds(bet.bettingOption.american_odds)}
-                          </div>
+                          {!locked && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onRemoveBet(index)}
+                              className="text-gray-400 hover:text-white p-1 h-6 w-6 flex-shrink-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onRemoveBet(index)}
-                          className="text-gray-400 hover:text-white p-1 h-6 w-6 flex-shrink-0"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
                       
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -241,6 +257,7 @@ export const Betslip: React.FC<BetslipProps> = ({
                           type="number"
                           value={bet.amount === 0 ? '' : bet.amount}
                           onChange={(e) => {
+                            if (locked) return; // Don't allow changes for locked bets
                             const value = e.target.value;
                             if (value === '' || value === '0') {
                               onUpdateAmount(index, 0);
@@ -252,10 +269,11 @@ export const Betslip: React.FC<BetslipProps> = ({
                             }
                           }}
                           onFocus={(e) => e.target.select()}
+                          disabled={locked}
+                          className={`text-white bg-gray-700 border-gray-600 h-8 text-sm flex-1 ${locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                           min="1"
                           max={remainingBalance + bet.amount}
                           step="0.01"
-                          className="h-8 text-sm flex-1"
                           placeholder="0.00"
                         />
                         <div className="text-sm text-gray-400 flex-shrink-0">
@@ -263,7 +281,8 @@ export const Betslip: React.FC<BetslipProps> = ({
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

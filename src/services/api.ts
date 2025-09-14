@@ -182,7 +182,7 @@ class ApiService {
     }>('/api/leagues/user');
   }
 
-  async updateProfile(data: { username?: string; email?: string }) {
+  async updateProfile(data: { username?: string; email?: string; timezone?: string }) {
     return this.request<{
       message: string;
       user: any;
@@ -430,6 +430,26 @@ class ApiService {
 
   async getParlayBetDetails(parlayId: number) {
     return this.request(`/api/bets/parlay/${parlayId}`);
+  }
+
+  // Bet deletion methods
+  async deleteBet(betId: number) {
+    return this.request(`/api/bets/${betId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async deleteParlayBet(parlayId: number) {
+    return this.request(`/api/bets/parlay/${parlayId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Game lock service
+  async lockGames() {
+    return this.request('/api/bets/admin/lock-games', {
+      method: 'POST',
+    });
   }
 
   // Bet validation and statistics endpoints

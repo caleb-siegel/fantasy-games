@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronLeft, ChevronRight, Calendar, Clock, Trophy, Target, Eye, RefreshCw, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { formatGameDateTime, getCompactGameDateTime } from '@/utils/dateUtils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MatchupDetail {
   id: number;
@@ -78,6 +79,7 @@ export function ComprehensiveMatchups({
   currentWeek, 
   onWeekChange 
 }: ComprehensiveMatchupsProps) {
+  const { user } = useAuth();
   const [currentWeekMatchups, setCurrentWeekMatchups] = useState<MatchupDetail[]>([]);
   const [allMatchups, setAllMatchups] = useState<MatchupDetail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -331,7 +333,7 @@ export function ComprehensiveMatchups({
                                 </div>
                                 <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {getCompactGameDateTime(bet.game.start_time)}
+                                  {getCompactGameDateTime(bet.game.start_time, user?.timezone || 'America/New_York')}
                                 </div>
                                 {bet.is_parlay && bet.parlay_legs && (
                                   <div className="space-y-2 mt-2">
@@ -346,7 +348,7 @@ export function ComprehensiveMatchups({
                                         {leg.gameInfo?.start_time && (
                                           <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
                                             <Clock className="h-3 w-3" />
-                                            {getCompactGameDateTime(leg.gameInfo.start_time)}
+                                            {getCompactGameDateTime(leg.gameInfo.start_time, user?.timezone || 'America/New_York')}
                                           </div>
                                         )}
                                       </div>
@@ -418,7 +420,7 @@ export function ComprehensiveMatchups({
                                 </div>
                                 <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {getCompactGameDateTime(bet.game.start_time)}
+                                  {getCompactGameDateTime(bet.game.start_time, user?.timezone || 'America/New_York')}
                                 </div>
                                 {bet.is_parlay && bet.parlay_legs && (
                                   <div className="space-y-2 mt-2">
@@ -433,7 +435,7 @@ export function ComprehensiveMatchups({
                                         {leg.gameInfo?.start_time && (
                                           <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
                                             <Clock className="h-3 w-3" />
-                                            {getCompactGameDateTime(leg.gameInfo.start_time)}
+                                            {getCompactGameDateTime(leg.gameInfo.start_time, user?.timezone || 'America/New_York')}
                                           </div>
                                         )}
                                       </div>

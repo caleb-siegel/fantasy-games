@@ -13,11 +13,12 @@ export interface FormattedDateTime {
 }
 
 /**
- * Format a date string to show day of week, date, and time
+ * Format a date string to show day of week, date, and time in user's timezone
  * @param dateString - ISO date string
+ * @param timezone - User's timezone (e.g., 'America/New_York')
  * @returns Formatted date/time information
  */
-export function formatGameDateTime(dateString: string): FormattedDateTime {
+export function formatGameDateTime(dateString: string, timezone: string = 'America/New_York'): FormattedDateTime {
   const gameDate = new Date(dateString);
   const now = new Date();
   
@@ -28,15 +29,20 @@ export function formatGameDateTime(dateString: string): FormattedDateTime {
   
   const gameDay = new Date(gameDate.getFullYear(), gameDate.getMonth(), gameDate.getDate());
   
-  const dayOfWeek = gameDate.toLocaleDateString('en-US', { weekday: 'short' });
+  const dayOfWeek = gameDate.toLocaleDateString('en-US', { 
+    weekday: 'short',
+    timeZone: timezone 
+  });
   const date = gameDate.toLocaleDateString('en-US', { 
     month: 'short', 
-    day: 'numeric' 
+    day: 'numeric',
+    timeZone: timezone 
   });
   const time = gameDate.toLocaleTimeString('en-US', { 
     hour: 'numeric', 
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
+    timeZone: timezone 
   });
   
   const fullDateTime = gameDate.toLocaleString('en-US', {
@@ -45,7 +51,8 @@ export function formatGameDateTime(dateString: string): FormattedDateTime {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-    hour12: true
+    hour12: true,
+    timeZone: timezone
   });
   
   return {
@@ -60,12 +67,13 @@ export function formatGameDateTime(dateString: string): FormattedDateTime {
 }
 
 /**
- * Get a compact display string for game date/time
+ * Get a compact display string for game date/time in user's timezone
  * @param dateString - ISO date string
+ * @param timezone - User's timezone (e.g., 'America/New_York')
  * @returns Compact formatted string
  */
-export function getCompactGameDateTime(dateString: string): string {
-  const formatted = formatGameDateTime(dateString);
+export function getCompactGameDateTime(dateString: string, timezone: string = 'America/New_York'): string {
+  const formatted = formatGameDateTime(dateString, timezone);
   
   if (formatted.isToday) {
     return `Today ${formatted.time}`;
@@ -77,12 +85,13 @@ export function getCompactGameDateTime(dateString: string): string {
 }
 
 /**
- * Get a detailed display string for game date/time
+ * Get a detailed display string for game date/time in user's timezone
  * @param dateString - ISO date string
+ * @param timezone - User's timezone (e.g., 'America/New_York')
  * @returns Detailed formatted string
  */
-export function getDetailedGameDateTime(dateString: string): string {
-  const formatted = formatGameDateTime(dateString);
+export function getDetailedGameDateTime(dateString: string, timezone: string = 'America/New_York'): string {
+  const formatted = formatGameDateTime(dateString, timezone);
   
   if (formatted.isToday) {
     return `Today, ${formatted.date} at ${formatted.time}`;
