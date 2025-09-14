@@ -195,14 +195,13 @@ export function ComprehensiveMatchups({
   };
 
   const getUserTotalPayoutInfo = (bets: BetSummary[]) => {
-    const hasEvaluatedBets = bets.some(bet => bet.outcome && bet.outcome !== 'pending');
+    const evaluatedBets = bets.filter(bet => bet.outcome && bet.outcome !== 'pending');
+    const pendingBets = bets.filter(bet => !bet.outcome || bet.outcome === 'pending');
     
-    if (hasEvaluatedBets) {
-      const totalFinalPayout = bets.reduce((sum, bet) => {
-        if (bet.outcome && bet.outcome !== 'pending') {
-          return sum + (bet.actual_payout || 0);
-        }
-        return sum + bet.potential_payout;
+    // Only show "Final" if ALL bets have been evaluated
+    if (evaluatedBets.length === bets.length && evaluatedBets.length > 0) {
+      const totalFinalPayout = evaluatedBets.reduce((sum, bet) => {
+        return sum + (bet.actual_payout || 0);
       }, 0);
       
       return {
@@ -212,6 +211,21 @@ export function ComprehensiveMatchups({
       };
     }
     
+    // If some bets are evaluated but not all, show partial results
+    if (evaluatedBets.length > 0) {
+      const evaluatedPayout = evaluatedBets.reduce((sum, bet) => {
+        return sum + (bet.actual_payout || 0);
+      }, 0);
+      const pendingPayout = pendingBets.reduce((sum, bet) => sum + bet.potential_payout, 0);
+      
+      return {
+        label: 'Partial',
+        amount: evaluatedPayout + pendingPayout,
+        color: 'text-yellow-600'
+      };
+    }
+    
+    // All bets are pending
     const totalPotentialPayout = bets.reduce((sum, bet) => sum + bet.potential_payout, 0);
     return {
       label: 'Potential',
@@ -253,6 +267,17 @@ export function ComprehensiveMatchups({
       return `${leg.outcome_name} ${leg.outcome_point && leg.outcome_point > 0 ? '+' : ''}${leg.outcome_point}`;
     }
     return leg.outcome_name;
+  };
+
+  const getParlayLegStatusIcon = (leg: any) => {
+    if (leg.result === 'won') {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    } else if (leg.result === 'lost') {
+      return <AlertCircle className="h-4 w-4 text-red-500" />;
+    } else if (leg.result === 'pending') {
+      return <Clock className="h-4 w-4 text-yellow-500" />;
+    }
+    return <Clock className="h-4 w-4 text-gray-500" />;
   };
 
   const formatAmericanOdds = (americanOdds: number) => {
@@ -339,8 +364,9 @@ export function ComprehensiveMatchups({
                                   <div className="space-y-2 mt-2">
                                     {bet.parlay_legs.map((leg: any, index: number) => (
                                       <div key={leg.id} className="text-sm bg-blue-800 p-2 rounded">
-                                        <div className="font-medium text-blue-200">
+                                        <div className="font-medium text-blue-200 flex items-center gap-2">
                                           Leg {index + 1}: {leg.gameInfo?.away_team || 'Away'} @ {leg.gameInfo?.home_team || 'Home'}
+                                          {getParlayLegStatusIcon(leg)}
                                         </div>
                                         <div className="text-blue-300">
                                           {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker || 'Multiple'}
@@ -426,8 +452,9 @@ export function ComprehensiveMatchups({
                                   <div className="space-y-2 mt-2">
                                     {bet.parlay_legs.map((leg: any, index: number) => (
                                       <div key={leg.id} className="text-sm bg-blue-800 p-2 rounded">
-                                        <div className="font-medium text-blue-200">
+                                        <div className="font-medium text-blue-200 flex items-center gap-2">
                                           Leg {index + 1}: {leg.gameInfo?.away_team || 'Away'} @ {leg.gameInfo?.home_team || 'Home'}
+                                          {getParlayLegStatusIcon(leg)}
                                         </div>
                                         <div className="text-blue-300">
                                           {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker || 'Multiple'}
