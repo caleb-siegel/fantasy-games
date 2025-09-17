@@ -49,7 +49,6 @@ interface CompactBetslipProps {
   onPlaceParlay: (stake: number) => void;
   onContinueToReview: () => void;
   remainingBalance: number;
-  week: number;
   placingParlay: boolean;
 }
 
@@ -61,7 +60,6 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
   onPlaceParlay,
   onContinueToReview,
   remainingBalance,
-  week,
   placingParlay
 }) => {
   const { user } = useAuth();

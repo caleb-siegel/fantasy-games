@@ -101,10 +101,21 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
     // Load bets and parlay bets from sessionStorage
     const storedBets = sessionStorage.getItem('betslipBets');
     const storedParlayBets = sessionStorage.getItem('parlayBets');
+    const storedWeek = sessionStorage.getItem('bettingWeek');
     
     console.log('🔍 BettingReview Debug:');
     console.log('Stored bets:', storedBets);
     console.log('Stored parlay bets:', storedParlayBets);
+    console.log('Stored week:', storedWeek);
+    
+    // Set week from sessionStorage if available
+    if (storedWeek) {
+      const weekValue = parseInt(storedWeek);
+      console.log(`🔍 Setting week from sessionStorage: ${storedWeek} -> ${weekValue}`);
+      setWeek(weekValue);
+    } else {
+      console.log(`🔍 No week found in sessionStorage, using default: ${propWeek || 1}`);
+    }
     
     if (storedBets) {
       try {
@@ -134,8 +145,13 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
     }
 
     loadUserBets();
-    loadMatchupData();
+    // loadMatchupData will be called when week changes
   }, []);
+
+  // Load matchup data when week changes
+  useEffect(() => {
+    loadMatchupData();
+  }, [week]);
 
   // Set initial parlay stake after userBets are loaded
   useEffect(() => {
@@ -159,6 +175,8 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
 
   const loadUserBets = async () => {
     try {
+      console.log(`🔍 loadUserBets called with week: ${week}`);
+      console.log(`🔍 API URL will be: /api/bets/user/${week}`);
       const betsResponse = await apiService.getUserBets(week);
       console.log('🔍 API Response from getUserBets:', betsResponse);
       console.log('🔍 Regular bets:', betsResponse.bets);
@@ -273,6 +291,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
           amount: betslipBet.amount
         }));
 
+        console.log(`🎯 Placing batch bets for week ${week}:`, batchBets);
         await apiService.placeBatchBets({ bets: batchBets, week });
       }
 

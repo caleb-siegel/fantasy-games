@@ -133,6 +133,16 @@ class ApiService {
   }
 
   // Betting endpoints
+  async getAllBettingOptions() {
+    return this.request<{
+      games: Array<{
+        game: any;
+        betting_options: any;
+      }>;
+      market_types: string[];
+    }>(`/api/bets/options`);
+  }
+
   async getWeeklyBettingOptions(week: number) {
     return this.request<{
       week: number;
@@ -147,7 +157,6 @@ class ApiService {
     matchupId: number;
     bettingOptionId: number;
     amount: number;
-    week: number;
   }) {
     return this.request<{
       message: string;
@@ -257,7 +266,8 @@ class ApiService {
     }>(`/api/bets/matchup/${matchupId}/user/${userId}`);
   }
 
-  async getUserBets(week: number) {
+  async getUserBets(week?: number) {
+    const url = week ? `/api/bets/user/${week}` : `/api/bets/user/all`;
     return this.request<{
       bets: any[];
       parlay_bets: any[];
@@ -265,8 +275,8 @@ class ApiService {
       total_regular_bet_amount: number;
       total_parlay_bet_amount: number;
       remaining_balance: number;
-      week: number;
-    }>(`/api/bets/user/${week}`);
+      week?: number;
+    }>(url);
   }
 
   async getMatchupBets(matchupId: number) {
@@ -411,15 +421,13 @@ class ApiService {
     matchupId: number;
     bettingOptionIds: number[];
     amount: number;
-    week: number;
   }) {
     return this.request('/api/bets/parlay', {
       method: 'POST',
       body: JSON.stringify({
         matchup_id: data.matchupId,
         betting_option_ids: data.bettingOptionIds,
-        amount: data.amount,
-        week: data.week
+        amount: data.amount
       }),
     });
   }

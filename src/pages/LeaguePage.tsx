@@ -60,7 +60,6 @@ export default function LeaguePage() {
   const { refreshLeagues } = useLeagueMembership();
   
   const [league, setLeague] = useState<League | null>(null);
-  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
   const [currentMatchup, setCurrentMatchup] = useState<Matchup | null>(null);
   const [standings, setStandings] = useState<Standing[]>([]);
   const [allMatchups, setAllMatchups] = useState<Matchup[]>([]);
@@ -88,11 +87,7 @@ export default function LeaguePage() {
       loadMatchupData();
       loadStandings();
     }
-  }, [league?.id, league?.is_setup_complete, selectedWeek]);
-
-  useEffect(() => {
-    setSelectedWeek(currentWeek);
-  }, [currentWeek]);
+  }, [league?.id, league?.is_setup_complete, currentWeek]);
 
   const loadLeagueData = async () => {
     if (!leagueId) return;
@@ -117,7 +112,9 @@ export default function LeaguePage() {
     if (!league) return;
     
     try {
-      const matchupResponse = await apiService.getUserMatchup(league.id, selectedWeek);
+      console.log(`🔄 Loading matchup for league ${league.id}, week ${currentWeek}`);
+      const matchupResponse = await apiService.getUserMatchup(league.id, currentWeek);
+      console.log(`📋 Loaded matchup:`, matchupResponse.matchup);
       setCurrentMatchup(matchupResponse.matchup);
     } catch (error) {
       console.error('Failed to load matchup:', error);
@@ -161,16 +158,6 @@ export default function LeaguePage() {
     navigate(`/leagues/${leagueId}?${newSearchParams.toString()}`, { replace: true });
   };
 
-  const handleWeekChange = (week: number) => {
-    if (week >= 1 && week <= 17) {
-      setSelectedWeek(week);
-    }
-  };
-
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    const newWeek = direction === 'prev' ? selectedWeek - 1 : selectedWeek + 1;
-    handleWeekChange(newWeek);
-  };
 
   if (loading) {
     return (
@@ -250,55 +237,6 @@ export default function LeaguePage() {
           </div>
         </div>
 
-        {/* Week Navigation */}
-        {league.is_setup_complete && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <span>Week {selectedWeek}</span>
-                  <Badge variant={selectedWeek <= 14 ? "default" : "secondary"}>
-                    {selectedWeek <= 14 ? "Regular Season" : "Playoffs"}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigateWeek('prev')}
-                    disabled={selectedWeek <= 1}
-                    className="flex items-center gap-1"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline">Previous</span>
-                  </Button>
-                  <Select value={selectedWeek.toString()} onValueChange={(value) => handleWeekChange(parseInt(value))}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 17 }, (_, i) => i + 1).map((week) => (
-                        <SelectItem key={week} value={week.toString()}>
-                          Week {week} {week <= 14 ? '(RS)' : '(PO)'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigateWeek('next')}
-                    disabled={selectedWeek >= 17}
-                    className="flex items-center gap-1"
-                  >
-                    <span className="hidden sm:inline">Next</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        )}
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
@@ -360,9 +298,9 @@ export default function LeaguePage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Current Week</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">Week {selectedWeek}</span>
-                        <Badge variant={selectedWeek <= 14 ? "default" : "secondary"}>
-                          {selectedWeek <= 14 ? "Regular Season" : "Playoffs"}
+                        <span className="font-semibold">Week {currentWeek}</span>
+                        <Badge variant={currentWeek <= 14 ? "default" : "secondary"}>
+                          {currentWeek <= 14 ? "Regular Season" : "Playoffs"}
                         </Badge>
                       </div>
                     </div>
@@ -385,7 +323,7 @@ export default function LeaguePage() {
                         {currentMatchup.user1_username} vs {currentMatchup.user2_username}
                       </div>
                       <div className="text-muted-foreground">
-                        Week {selectedWeek} • {league.name}
+                        Week {currentWeek} • {league.name}
                       </div>
                       {currentMatchup.winner_id ? (
                         <div className="p-3 bg-green-50 rounded-lg">
@@ -472,8 +410,8 @@ export default function LeaguePage() {
             {league.is_setup_complete ? (
               <ComprehensiveMatchups 
                 leagueId={league.id}
-                currentWeek={selectedWeek}
-                onWeekChange={handleWeekChange}
+                currentWeek={currentWeek}
+                onWeekChange={(week) => {}} // No-op since we removed week navigation
               />
             ) : (
               <Card>
@@ -519,15 +457,15 @@ export default function LeaguePage() {
               currentMatchup ? (
                 <BettingInterface 
                   matchupId={currentMatchup.id} 
-                  week={selectedWeek} 
                   leagueId={league.id}
+                  week={currentWeek}
                 />
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">
                     <h3 className="text-xl font-semibold mb-2">No Matchup Available</h3>
                     <p className="text-muted-foreground">
-                      No matchup found for week {selectedWeek}. Please check with your commissioner.
+                      No matchup found for week {currentWeek}. Please check with your commissioner.
                     </p>
                   </CardContent>
                 </Card>

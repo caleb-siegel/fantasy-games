@@ -77,11 +77,11 @@ interface BetslipBet {
 
 interface BettingInterfaceProps {
   matchupId: number;
-  week: number;
   leagueId: number;
+  week: number;
 }
 
-export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, week, leagueId }) => {
+export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, leagueId, week }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [games, setGames] = useState<GameWithOptions[]>([]);
@@ -133,11 +133,14 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
       setLoading(true);
       setError(null);
 
+      console.log(`🔄 Loading betting data for week ${week}, matchup ${matchupId}`);
+
       const optionsResponse = await apiService.getWeeklyBettingOptions(week);
       setGames(optionsResponse.games);
       setAvailableMarketTypes(optionsResponse.market_types || []);
 
-      const betsResponse = await apiService.getUserBets(week);
+      const betsResponse = await apiService.getUserBets(week); // Get bets for current week
+      console.log(`📊 Week ${week} bets:`, betsResponse.bets.length, 'bets, remaining balance:', betsResponse.remaining_balance);
       setUserBets(betsResponse.bets);
       setRemainingBalance(betsResponse.remaining_balance);
       setTotalBetAmount(betsResponse.total_bet_amount);
@@ -221,8 +224,10 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
   const navigateToBettingReview = () => {
     // Store bets and parlay bets in sessionStorage to pass to the review page
+    console.log(`🔍 Storing week ${week} in sessionStorage`);
     sessionStorage.setItem('betslipBets', JSON.stringify(betslipBets));
     sessionStorage.setItem('parlayBets', JSON.stringify(parlayBets));
+    sessionStorage.setItem('bettingWeek', week.toString());
     
     navigate(`/leagues/${leagueId}/betting-review`);
   };
@@ -276,8 +281,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
       await apiService.placeParlayBet({
         matchupId: matchupId,
         bettingOptionIds: bettingOptionIds,
-        amount: stake,
-        week: week
+        amount: stake
       });
 
       toast.success(`Successfully placed ${parlayBets.length}-leg parlay!`);
@@ -304,11 +308,12 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
       setPlacingBet(true);
       setError(null);
 
+      console.log(`🎯 Placing bet: matchup ${matchupId}, option ${selectedBettingOption.id}, amount $${amount}`);
+      
       await apiService.placeBet({
         matchupId: matchupId,
         bettingOptionId: selectedBettingOption.id,
-        amount: amount,
-        week: week
+        amount: amount
       });
 
       setBetAmount('');
@@ -774,7 +779,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
               onPlaceParlay={placeParlay}
               onContinueToReview={navigateToBettingReview}
               remainingBalance={remainingBalance}
-              week={week}
               placingParlay={placingParlay}
             />
           </div>
@@ -834,7 +838,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
           onPlaceParlay={placeParlay}
           onContinueToReview={navigateToBettingReview}
           remainingBalance={remainingBalance}
-          week={week}
           placingParlay={placingParlay}
         />
       </div>
