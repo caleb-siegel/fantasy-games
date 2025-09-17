@@ -62,6 +62,7 @@ export const Betslip: React.FC<BetslipProps> = ({
       case 'h2h': return 'Moneyline';
       case 'spreads': return 'Spread';
       case 'totals': return 'Total';
+      case 'team_totals': return 'Team Total';
       default: return marketType;
     }
   };
@@ -72,6 +73,8 @@ export const Betslip: React.FC<BetslipProps> = ({
       return `${bettingOption.outcome_name} ${bettingOption.outcome_point}`;
     } else if (bettingOption.market_type === 'spreads') {
       return `${bettingOption.outcome_name} ${bettingOption.outcome_point > 0 ? '+' : ''}${bettingOption.outcome_point}`;
+    } else if (bettingOption.market_type === 'team_totals') {
+      return `${bettingOption.outcome_name} ${bettingOption.outcome_point}`;
     }
     return bettingOption.outcome_name;
   };

@@ -101,6 +101,8 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
       return `${bettingOption.outcome_name} ${bettingOption.outcome_point}`;
     } else if (bettingOption.market_type === 'spreads') {
       return `${bettingOption.outcome_name} ${bettingOption.outcome_point > 0 ? '+' : ''}${bettingOption.outcome_point}`;
+    } else if (bettingOption.market_type === 'team_totals') {
+      return `${bettingOption.outcome_name} ${bettingOption.outcome_point}`;
     }
     return bettingOption.outcome_name;
   };
@@ -110,6 +112,8 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
       return `${leg.outcome_name} ${leg.outcome_point}`;
     } else if (leg.market_type === 'spreads') {
       return `${leg.outcome_name} ${leg.outcome_point && leg.outcome_point > 0 ? '+' : ''}${leg.outcome_point}`;
+    } else if (leg.market_type === 'team_totals') {
+      return `${leg.outcome_name} ${leg.outcome_point}`;
     }
     return leg.outcome_name;
   };

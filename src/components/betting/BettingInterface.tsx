@@ -42,6 +42,10 @@ interface GameWithOptions {
       [outcomeKey: string]: {
         outcome_name: string;
         outcome_point: number | null;
+        player_name?: string;
+        player_position?: string;
+        prop_category?: string;
+        team_side?: string;
         bookmakers: Array<{
           id: number;
           bookmaker: string;
@@ -89,6 +93,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [availableMarketTypes, setAvailableMarketTypes] = useState<string[]>([]);
   const [selectedBettingOption, setSelectedBettingOption] = useState<BettingOption | null>(null);
   const [betAmount, setBetAmount] = useState<string>('');
   const [placingBet, setPlacingBet] = useState(false);
@@ -130,6 +135,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
 
       const optionsResponse = await apiService.getWeeklyBettingOptions(week);
       setGames(optionsResponse.games);
+      setAvailableMarketTypes(optionsResponse.market_types || []);
 
       const betsResponse = await apiService.getUserBets(week);
       setUserBets(betsResponse.bets);
@@ -325,15 +331,39 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
       case 'h2h': return 'Moneyline';
       case 'spreads': return 'Spread';
       case 'totals': return 'Total';
-      default: return marketType;
+      case 'team_totals': return 'Team Total';
+      case 'player_pass_tds': return 'Pass TDs';
+      case 'player_pass_yds': return 'Pass Yards';
+      case 'player_rush_yds': return 'Rush Yards';
+      case 'player_receptions': return 'Receptions';
+      case 'player_pass_completions': return 'Completions';
+      case 'player_rush_att': return 'Rush Attempts';
+      case 'player_pass_att': return 'Pass Attempts';
+      case 'player_receiving_yds': return 'Receiving Yards';
+      case 'player_receiving_tds': return 'Receiving TDs';
+      case 'player_rushing_tds': return 'Rushing TDs';
+      default: 
+        // Convert snake_case to Title Case
+        return marketType.split('_').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
     }
   };
 
   const getOutcomeDisplayName = (outcome: any, marketType: string) => {
-    if (marketType === 'spreads' && outcome.outcome_point) {
+    if (marketType.startsWith('player_')) {
+      // For player props, show player name and outcome
+      const playerName = outcome.player_name || outcome.outcome_name;
+      if (outcome.outcome_point) {
+        return `${playerName} ${outcome.outcome_name} ${outcome.outcome_point}`;
+      }
+      return `${playerName} ${outcome.outcome_name}`;
+    } else if (marketType === 'spreads' && outcome.outcome_point) {
       return `${outcome.outcome_name} ${outcome.outcome_point}`;
     } else if (marketType === 'totals' && outcome.outcome_point) {
       return `${outcome.outcome_name} ${outcome.outcome_point > 0 ? '+' : ''}${outcome.outcome_point}`;
+    } else if (marketType === 'team_totals' && outcome.outcome_point) {
+      return `${outcome.outcome_name} ${outcome.outcome_point}`;
     }
     return outcome.outcome_name;
   };
@@ -380,11 +410,17 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
           </CardHeader>
           {expandedGames.has(gameWithOptions.game.id) && (
             <CardContent className="p-6">
-            <Tabs defaultValue="h2h" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-gray-900">
-                <TabsTrigger value="h2h" className="font-semibold text-white data-[state=active]:bg-green-600 data-[state=active]:text-white">Moneyline</TabsTrigger>
-                <TabsTrigger value="spreads" className="font-semibold text-white data-[state=active]:bg-green-600 data-[state=active]:text-white">Spread</TabsTrigger>
-                <TabsTrigger value="totals" className="font-semibold text-white data-[state=active]:bg-green-600 data-[state=active]:text-white">Total</TabsTrigger>
+            <Tabs defaultValue={Object.keys(gameWithOptions.betting_options)[0] || "h2h"} className="w-full">
+              <TabsList className={`grid w-full bg-gray-900`} style={{gridTemplateColumns: `repeat(${Object.keys(gameWithOptions.betting_options).length}, 1fr)`}}>
+                {Object.keys(gameWithOptions.betting_options).map((marketType) => (
+                  <TabsTrigger 
+                    key={marketType} 
+                    value={marketType} 
+                    className="font-semibold text-white data-[state=active]:bg-green-600 data-[state=active]:text-white"
+                  >
+                    {getMarketDisplayName(marketType)}
+                  </TabsTrigger>
+                ))}
               </TabsList>
 
               {Object.entries(gameWithOptions.betting_options).map(([marketType, outcomes]) => (
@@ -397,18 +433,25 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
                       {/* Left section - Away team or Under */}
                       <div className="border border-gray-600 rounded-lg p-4 bg-gray-800/50">
                         <h5 className="font-semibold text-sm text-white text-center mb-3">
-                          {marketType === 'totals' ? 'Under' : gameWithOptions.game.away_team}
+                          {marketType === 'totals' ? 'Under' : 
+                           marketType === 'team_totals' ? 'Away Team Total' : 
+                           marketType.startsWith('player_') ? 'Player Props' :
+                           gameWithOptions.game.away_team}
                         </h5>
                         <div className="space-y-2">
                           {Object.entries(outcomes).map(([outcomeKey, outcome]) => {
                             // Filter for away team or under outcomes
                             const isRelevantOutcome = marketType === 'totals' 
                               ? outcome.outcome_name.toLowerCase().includes('under')
-                              : marketType === 'h2h' 
+                              : marketType === 'team_totals'
                                 ? outcome.outcome_name === gameWithOptions.game.away_team
-                                : marketType === 'spreads'
-                                  ? outcome.outcome_name === gameWithOptions.game.away_team
-                                  : false;
+                                : marketType.startsWith('player_')
+                                  ? outcome.player_name // Show all player props in both sections
+                                  : marketType === 'h2h' 
+                                    ? outcome.outcome_name === gameWithOptions.game.away_team
+                                    : marketType === 'spreads'
+                                      ? outcome.outcome_name === gameWithOptions.game.away_team
+                                      : false;
 
                             if (!isRelevantOutcome) return null;
 
@@ -523,18 +566,25 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, w
                       {/* Right section - Home team or Over */}
                       <div className="border border-gray-600 rounded-lg p-4 bg-gray-800/50">
                         <h5 className="font-semibold text-sm text-white text-center mb-3">
-                          {marketType === 'totals' ? 'Over' : gameWithOptions.game.home_team}
+                          {marketType === 'totals' ? 'Over' : 
+                           marketType === 'team_totals' ? 'Home Team Total' : 
+                           marketType.startsWith('player_') ? 'Player Props' :
+                           gameWithOptions.game.home_team}
                         </h5>
                         <div className="space-y-2">
                           {Object.entries(outcomes).map(([outcomeKey, outcome]) => {
                             // Filter for home team or over outcomes
                             const isRelevantOutcome = marketType === 'totals' 
                               ? outcome.outcome_name.toLowerCase().includes('over')
-                              : marketType === 'h2h' 
+                              : marketType === 'team_totals'
                                 ? outcome.outcome_name === gameWithOptions.game.home_team
-                                : marketType === 'spreads'
-                                  ? outcome.outcome_name === gameWithOptions.game.home_team
-                                  : false;
+                                : marketType.startsWith('player_')
+                                  ? outcome.player_name // Show all player props in both sections
+                                  : marketType === 'h2h' 
+                                    ? outcome.outcome_name === gameWithOptions.game.home_team
+                                    : marketType === 'spreads'
+                                      ? outcome.outcome_name === gameWithOptions.game.home_team
+                                      : false;
 
                             if (!isRelevantOutcome) return null;
 

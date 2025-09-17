@@ -182,6 +182,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       case 'h2h': return 'Moneyline';
       case 'spreads': return 'Spread';
       case 'totals': return 'Total';
+      case 'team_totals': return 'Team Total';
       default: return marketType;
     }
   };
@@ -192,6 +193,8 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       return `${bettingOption.outcome_name} ${bettingOption.outcome_point}`;
     } else if (bettingOption.market_type === 'spreads') {
       return `${bettingOption.outcome_name} ${bettingOption.outcome_point > 0 ? '+' : ''}${bettingOption.outcome_point}`;
+    } else if (bettingOption.market_type === 'team_totals') {
+      return `${bettingOption.outcome_name} ${bettingOption.outcome_point}`;
     }
     return bettingOption.outcome_name;
   };
@@ -201,6 +204,8 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       return `${leg.outcome_name} ${leg.outcome_point}`;
     } else if (leg.market_type === 'spreads') {
       return `${leg.outcome_name} ${leg.outcome_point && leg.outcome_point > 0 ? '+' : ''}${leg.outcome_point}`;
+    } else if (leg.market_type === 'team_totals') {
+      return `${leg.outcome_name} ${leg.outcome_point}`;
     }
     return leg.outcome_name;
   };

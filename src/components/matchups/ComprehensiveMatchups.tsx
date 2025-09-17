@@ -255,6 +255,8 @@ export function ComprehensiveMatchups({
       return `${marketType}: ${betting_option.outcome_name} ${betting_option.outcome_point || ''}`;
     } else if (betting_option.market_type === 'spreads') {
       return `${marketType}: ${betting_option.outcome_name} ${betting_option.outcome_point || ''}`;
+    } else if (betting_option.market_type === 'team_totals') {
+      return `${marketType}: ${betting_option.outcome_name} ${betting_option.outcome_point || ''}`;
     } else {
       return `${marketType}: ${betting_option.outcome_name}`;
     }
@@ -265,6 +267,8 @@ export function ComprehensiveMatchups({
       return `${leg.outcome_name} ${leg.outcome_point}`;
     } else if (leg.market_type === 'spreads') {
       return `${leg.outcome_name} ${leg.outcome_point && leg.outcome_point > 0 ? '+' : ''}${leg.outcome_point}`;
+    } else if (leg.market_type === 'team_totals') {
+      return `${leg.outcome_name} ${leg.outcome_point}`;
     }
     return leg.outcome_name;
   };

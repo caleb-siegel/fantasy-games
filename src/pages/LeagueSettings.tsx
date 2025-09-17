@@ -231,11 +231,11 @@ export default function LeagueSettings() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Regular Season</span>
-                      <Badge variant="outline">Weeks 1-14</Badge>
+                      <Badge variant="outline">Weeks 1-18</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Playoffs</span>
-                      <Badge variant="outline">Weeks 15-17</Badge>
+                      <Badge variant="outline">Weeks 19-22</Badge>
                     </div>
                     <div className="pt-2 border-t">
                       <p className="text-xs text-muted-foreground mb-3">

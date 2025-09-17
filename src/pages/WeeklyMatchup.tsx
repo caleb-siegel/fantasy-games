@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useCurrentWeek } from '@/hooks/useWeekManagement';
 import { toast } from 'sonner';
 
 interface Matchup {
@@ -76,16 +77,24 @@ export default function WeeklyMatchup() {
   const { leagueId } = useParams<{ leagueId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { currentWeek, refreshWeek } = useCurrentWeek();
   const [matchupData, setMatchupData] = useState<MatchupComparison | null>(null);
-  const [currentWeek, setCurrentWeek] = useState(1);
+  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (leagueId) {
+      setSelectedWeek(currentWeek);
       loadCurrentWeekMatchup();
     }
   }, [leagueId, currentWeek]);
+
+  useEffect(() => {
+    if (leagueId && selectedWeek) {
+      loadCurrentWeekMatchup();
+    }
+  }, [selectedWeek]);
 
   const loadCurrentWeekMatchup = async () => {
     if (!leagueId) return;
@@ -94,7 +103,7 @@ export default function WeeklyMatchup() {
       setLoading(true);
       
       // Get current week's matchup
-      const matchupResponse = await apiService.getUserMatchup(parseInt(leagueId), currentWeek);
+      const matchupResponse = await apiService.getUserMatchup(parseInt(leagueId), selectedWeek);
       const matchup = matchupResponse.matchup;
       
       // Get both users' bets for this matchup
@@ -120,7 +129,7 @@ export default function WeeklyMatchup() {
         user2_total: user2Total,
         user1_potential_payout: user1PotentialPayout,
         user2_potential_payout: user2PotentialPayout,
-        current_week: currentWeek
+        current_week: selectedWeek
       });
       
     } catch (error) {
@@ -145,8 +154,8 @@ export default function WeeklyMatchup() {
   };
 
   const handleWeekChange = (newWeek: number) => {
-    if (newWeek >= 1 && newWeek <= 17) {
-      setCurrentWeek(newWeek);
+    if (newWeek >= 1 && newWeek <= 22) {
+      setSelectedWeek(newWeek);
     }
   };
 
@@ -162,8 +171,8 @@ export default function WeeklyMatchup() {
     const currentMonth = now.getMonth();
     
     // Simple logic - in a real app, this would be based on actual NFL schedule
-    if (week === currentWeek) return 'current';
-    if (week < currentWeek) return 'completed';
+    if (week === selectedWeek) return 'current';
+    if (week < selectedWeek) return 'completed';
     return 'upcoming';
   };
 
@@ -191,7 +200,7 @@ export default function WeeklyMatchup() {
           <Card>
             <CardContent className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">No matchup found</h2>
-              <p className="text-muted-foreground">No matchup scheduled for Week {currentWeek}.</p>
+              <p className="text-muted-foreground">No matchup scheduled for Week {selectedWeek}.</p>
               <Button onClick={() => navigate('/leagues')} className="mt-4">
                 Back to Leagues
               </Button>
@@ -223,13 +232,17 @@ export default function WeeklyMatchup() {
           <div>
             <h1 className="text-3xl font-bold">Weekly Matchup</h1>
             <p className="text-muted-foreground">
-              Week {currentWeek} • {getWeekType(currentWeek)} • {myUsername} vs {opponentUsername}
+              Viewing Week {selectedWeek} {selectedWeek !== currentWeek && `(Current: Week ${currentWeek})`} • {getWeekType(selectedWeek)} • {myUsername} vs {opponentUsername}
             </p>
           </div>
           <div className="flex items-center space-x-4">
             <Button onClick={handleRefresh} disabled={refreshing} variant="outline">
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
+            </Button>
+            <Button onClick={refreshWeek} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Sync Current Week
             </Button>
             <Button onClick={() => navigate('/leagues')} variant="outline">
               Back to Leagues
@@ -244,27 +257,27 @@ export default function WeeklyMatchup() {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => handleWeekChange(currentWeek - 1)}
-                disabled={currentWeek <= 1}
+                onClick={() => handleWeekChange(selectedWeek - 1)}
+                disabled={selectedWeek <= 1}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous Week
               </Button>
               
               <div className="text-center">
-                <h2 className="text-xl font-bold">Week {currentWeek}</h2>
-                <p className="text-sm text-muted-foreground">{getWeekType(currentWeek)}</p>
-                <Badge variant={getWeekStatus(currentWeek) === 'current' ? 'default' : 'secondary'}>
-                  {getWeekStatus(currentWeek) === 'current' ? 'Current Week' : 
-                   getWeekStatus(currentWeek) === 'completed' ? 'Completed' : 'Upcoming'}
+                <h2 className="text-xl font-bold">Week {selectedWeek}</h2>
+                <p className="text-sm text-muted-foreground">{getWeekType(selectedWeek)}</p>
+                <Badge variant={getWeekStatus(selectedWeek) === 'current' ? 'default' : 'secondary'}>
+                  {getWeekStatus(selectedWeek) === 'current' ? 'Current Week' : 
+                   getWeekStatus(selectedWeek) === 'completed' ? 'Completed' : 'Upcoming'}
                 </Badge>
               </div>
               
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => handleWeekChange(currentWeek + 1)}
-                disabled={currentWeek >= 17}
+                onClick={() => handleWeekChange(selectedWeek + 1)}
+                disabled={selectedWeek >= 22}
               >
                 Next Week
                 <ChevronRight className="h-4 w-4" />

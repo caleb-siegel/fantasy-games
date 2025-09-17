@@ -489,6 +489,83 @@ class ApiService {
     });
   }
 
+  // Week Management API methods
+  async getCurrentWeek() {
+    return this.request<{
+      current_week: number;
+      season_year: number;
+      week_type: string;
+      can_rollover: boolean;
+    }>('/api/week/current');
+  }
+
+  async getWeekStatus(week?: number) {
+    const url = week ? `/api/week/status?week=${week}` : '/api/week/status';
+    return this.request<{
+      week: number;
+      week_type: string;
+      week_start: string;
+      week_end: string;
+      total_matchups: number;
+      completed_matchups: number;
+      completion_percentage: number;
+      total_bets: number;
+      total_parlay_bets: number;
+      is_current_week: boolean;
+      can_rollover: boolean;
+    }>(url);
+  }
+
+  async rolloverWeek() {
+    return this.request<{
+      success: boolean;
+      previous_week: number;
+      new_week: number;
+      message: string;
+    }>('/api/week/rollover', {
+      method: 'POST'
+    });
+  }
+
+  async setCurrentWeek(week: number) {
+    return this.request<{
+      success: boolean;
+      previous_week: number;
+      new_week: number;
+      message: string;
+    }>(`/api/week/set/${week}`, {
+      method: 'POST'
+    });
+  }
+
+  async getSeasonConfig() {
+    return this.request<{
+      id: number;
+      season_year: number;
+      current_week: number;
+      season_start_date: string;
+      week_rollover_day: number;
+      week_rollover_hour: number;
+      regular_season_weeks: number;
+      playoff_weeks: number;
+      is_active: boolean;
+      last_rollover: string | null;
+      created_at: string;
+      updated_at: string;
+    }>('/api/week/config');
+  }
+
+  async updateSeasonConfig(config: any) {
+    return this.request<{
+      success: boolean;
+      message: string;
+      config: any;
+    }>('/api/week/config', {
+      method: 'PUT',
+      body: JSON.stringify(config)
+    });
+  }
+
 }
 
 // Create and export a singleton instance

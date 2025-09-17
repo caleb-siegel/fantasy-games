@@ -159,6 +159,7 @@ export function getMarketDisplayName(marketType: string): string {
     case 'h2h': return 'Moneyline';
     case 'spreads': return 'Spread';
     case 'totals': return 'Total';
+    case 'team_totals': return 'Team Total';
     default: return marketType;
   }
 }
@@ -171,6 +172,8 @@ export function getOutcomeDisplayName(option: BettingOption): string {
     return `${option.outcome_name} ${option.outcome_point}`;
   } else if (option.market_type === 'spreads') {
     return `${option.outcome_name} ${option.outcome_point && option.outcome_point > 0 ? '+' : ''}${option.outcome_point}`;
+  } else if (option.market_type === 'team_totals') {
+    return `${option.outcome_name} ${option.outcome_point}`;
   }
   return option.outcome_name;
 }
