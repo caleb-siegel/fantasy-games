@@ -144,13 +144,19 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       navigate(-1);
     }
 
-    loadUserBets();
-    // loadMatchupData will be called when week changes
+    // loadUserBets and loadMatchupData will be called when week changes
   }, []);
 
   // Load matchup data when week changes
   useEffect(() => {
     loadMatchupData();
+  }, [week]);
+
+  // Load user bets when week changes
+  useEffect(() => {
+    if (week) {
+      loadUserBets();
+    }
   }, [week]);
 
   // Set initial parlay stake after userBets are loaded
@@ -179,10 +185,6 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       console.log(`🔍 API URL will be: /api/bets/user/${week}`);
       const betsResponse = await apiService.getUserBets(week);
       console.log('🔍 API Response from getUserBets:', betsResponse);
-      console.log('🔍 Regular bets:', betsResponse.bets);
-      console.log('🔍 Parlay bets:', betsResponse.parlay_bets);
-      console.log('🔍 Total bet amount:', betsResponse.total_bet_amount);
-      console.log('🔍 Remaining balance:', betsResponse.remaining_balance);
       
       setUserBets(betsResponse.bets);
       setRemainingBalance(betsResponse.remaining_balance);
