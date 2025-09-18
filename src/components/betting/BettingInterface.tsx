@@ -91,6 +91,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
   const [existingParlayBets, setExistingParlayBets] = useState<any[]>([]);
   const [betslipBets, setBetslipBets] = useState<BetslipBet[]>([]);
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
+  const [selectedMarketTypes, setSelectedMarketTypes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableMarketTypes, setAvailableMarketTypes] = useState<string[]>([]);
@@ -138,6 +139,16 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
       const optionsResponse = await apiService.getWeeklyBettingOptions(week);
       setGames(optionsResponse.games);
       setAvailableMarketTypes(optionsResponse.market_types || []);
+
+      // Initialize selected market types for each game
+      const initialMarketTypes: Record<string, string> = {};
+      optionsResponse.games.forEach((game: GameWithOptions) => {
+        const marketTypes = Object.keys(game.betting_options);
+        if (marketTypes.length > 0) {
+          initialMarketTypes[game.game.id] = marketTypes[0]; // Default to first market type
+        }
+      });
+      setSelectedMarketTypes(initialMarketTypes);
 
       const betsResponse = await apiService.getUserBets(week); // Get bets for current week
       console.log(`📊 Week ${week} bets:`, betsResponse.bets.length, 'bets, remaining balance:', betsResponse.remaining_balance);
@@ -220,6 +231,13 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
       newExpandedGames.add(gameId);
     }
     setExpandedGames(newExpandedGames);
+  };
+
+  const handleMarketTypeChange = (gameId: string, marketType: string) => {
+    setSelectedMarketTypes(prev => ({
+      ...prev,
+      [gameId]: marketType
+    }));
   };
 
   const navigateToBettingReview = () => {
@@ -415,56 +433,102 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
           </CardHeader>
           {expandedGames.has(gameWithOptions.game.id) && (
             <CardContent className="p-6">
-            <Tabs defaultValue={Object.keys(gameWithOptions.betting_options)[0] || "h2h"} className="w-full">
-              <TabsList className={`grid w-full bg-gray-900`} style={{gridTemplateColumns: `repeat(${Object.keys(gameWithOptions.betting_options).length}, 1fr)`}}>
-                {Object.keys(gameWithOptions.betting_options).map((marketType) => (
-                  <TabsTrigger 
-                    key={marketType} 
-                    value={marketType} 
-                    className="font-semibold text-white data-[state=active]:bg-green-600 data-[state=active]:text-white"
-                  >
-                    {getMarketDisplayName(marketType)}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+            <div className="w-full">
+              {/* Desktop: Tabs */}
+              <div className="hidden md:block mb-4">
+                <Tabs value={selectedMarketTypes[gameWithOptions.game.id] || Object.keys(gameWithOptions.betting_options)[0]} onValueChange={(value) => handleMarketTypeChange(gameWithOptions.game.id, value)} className="w-full">
+                  <TabsList className={`grid w-full bg-gray-900`} style={{gridTemplateColumns: `repeat(${Object.keys(gameWithOptions.betting_options).length}, 1fr)`}}>
+                    {Object.keys(gameWithOptions.betting_options).map((marketType) => (
+                      <TabsTrigger 
+                        key={marketType} 
+                        value={marketType} 
+                        className="font-semibold text-white data-[state=active]:bg-green-600 data-[state=active]:text-white"
+                      >
+                        {getMarketDisplayName(marketType)}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              </div>
 
-              {Object.entries(gameWithOptions.betting_options).map(([marketType, outcomes]) => (
-                <TabsContent key={marketType} value={marketType}>
+              {/* Mobile: Dropdown */}
+              <div className="md:hidden mb-4">
+                <Select 
+                  value={selectedMarketTypes[gameWithOptions.game.id] || Object.keys(gameWithOptions.betting_options)[0]} 
+                  onValueChange={(value) => handleMarketTypeChange(gameWithOptions.game.id, value)}
+                >
+                  <SelectTrigger className="w-full bg-gray-900 border-gray-700 text-white">
+                    <SelectValue placeholder="Select market type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700">
+                    {Object.keys(gameWithOptions.betting_options).map((marketType) => (
+                      <SelectItem 
+                        key={marketType} 
+                        value={marketType}
+                        className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                      >
+                        {getMarketDisplayName(marketType)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(() => {
+                const currentMarketType = selectedMarketTypes[gameWithOptions.game.id] || Object.keys(gameWithOptions.betting_options)[0];
+                const outcomes = gameWithOptions.betting_options[currentMarketType];
+                
+                if (!outcomes) return null;
+                
+                return (
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-lg text-white">{getMarketDisplayName(marketType)}</h4>
+                    <h4 className="font-semibold text-lg text-white">{getMarketDisplayName(currentMarketType)}</h4>
                     
                     {/* Organized betting layout with left/right sections */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Left section - Away team or Under */}
                       <div className="border border-gray-600 rounded-lg p-4 bg-gray-800/50">
                         <h5 className="font-semibold text-sm text-white text-center mb-3">
-                          {marketType === 'totals' ? 'Under' : 
-                           marketType === 'team_totals' ? 'Away Team Total' : 
-                           marketType.startsWith('player_') ? 'Over' :
+                          {currentMarketType === 'totals' ? 'Under' : 
+                           currentMarketType === 'team_totals' ? 'Away Team Total' : 
+                           currentMarketType.startsWith('player_') ? 'Over' :
                            gameWithOptions.game.away_team}
                         </h5>
                         <div className="space-y-2">
-                          {Object.entries(outcomes).map(([outcomeKey, outcome]) => {
-                            // Filter for away team or under outcomes
-                            const isRelevantOutcome = marketType === 'totals' 
-                              ? outcome.outcome_name.toLowerCase().includes('under')
-                              : marketType === 'team_totals'
-                                ? outcome.outcome_name === gameWithOptions.game.away_team
-                                : marketType.startsWith('player_')
-                                  ? outcome.outcome_name.toLowerCase().includes('over') // Show over bets in left section
-                                  : marketType === 'h2h' 
-                                    ? outcome.outcome_name === gameWithOptions.game.away_team
-                                    : marketType === 'spreads'
+                          {(() => {
+                            // Filter outcomes for left section
+                            const filteredOutcomes = Object.entries(outcomes).filter(([outcomeKey, outcome]) => {
+                              const isRelevantOutcome = currentMarketType === 'totals' 
+                                ? outcome.outcome_name.toLowerCase().includes('under')
+                                : currentMarketType === 'team_totals'
+                                  ? outcome.outcome_name === gameWithOptions.game.away_team
+                                  : currentMarketType.startsWith('player_')
+                                    ? outcome.outcome_name.toLowerCase().includes('over') // Show over bets in left section
+                                    : currentMarketType === 'h2h' 
                                       ? outcome.outcome_name === gameWithOptions.game.away_team
-                                      : false;
+                                      : currentMarketType === 'spreads'
+                                        ? outcome.outcome_name === gameWithOptions.game.away_team
+                                        : false;
+                              return isRelevantOutcome;
+                            });
 
-                            if (!isRelevantOutcome) return null;
+                            // Show empty state if no outcomes
+                            if (filteredOutcomes.length === 0) {
+                              return (
+                                <div className="text-center py-8 text-gray-400">
+                                  <div className="text-sm">No betting options available</div>
+                                </div>
+                              );
+                            }
+
+                            // Render filtered outcomes
+                            return filteredOutcomes.map(([outcomeKey, outcome]) => {
 
                             return (
                               <div key={outcomeKey} className="flex justify-between items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
                                 <div className="flex-1">
                                   <div className="font-medium text-white text-sm">
-                                    {getOutcomeDisplayName(outcome, marketType)}
+                                    {getOutcomeDisplayName(outcome, currentMarketType)}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -489,7 +553,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                                 addToBetslip({
                                                   id: bestOdds.id,
                                                   game_id: gameWithOptions.game.id,
-                                                  market_type: marketType,
+                                                  market_type: currentMarketType,
                                                   outcome_name: outcome.outcome_name,
                                                   outcome_point: outcome.outcome_point,
                                                   bookmaker: bestOdds.bookmaker,
@@ -526,7 +590,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                                 addToParlay({
                                                   id: bestOdds.id,
                                                   game_id: gameWithOptions.game.id,
-                                                  market_type: marketType,
+                                                  market_type: currentMarketType,
                                                   outcome_name: outcome.outcome_name,
                                                   outcome_point: outcome.outcome_point,
                                                   bookmaker: bestOdds.bookmaker,
@@ -553,7 +617,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                           onClick={() => setPopupBookmakers({
                                             outcomeKey,
                                             bookmakers: outcome.bookmakers,
-                                            outcomeName: getOutcomeDisplayName(outcome, marketType)
+                                            outcomeName: getOutcomeDisplayName(outcome, currentMarketType)
                                           })}
                                         >
                                           +{outcome.bookmakers.length - 1}
@@ -564,40 +628,54 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                 </div>
                               </div>
                             );
-                          })}
+                            });
+                          })()}
                         </div>
                       </div>
 
                       {/* Right section - Home team or Over */}
                       <div className="border border-gray-600 rounded-lg p-4 bg-gray-800/50">
                         <h5 className="font-semibold text-sm text-white text-center mb-3">
-                          {marketType === 'totals' ? 'Over' : 
-                           marketType === 'team_totals' ? 'Home Team Total' : 
-                           marketType.startsWith('player_') ? 'Under' :
+                          {currentMarketType === 'totals' ? 'Over' : 
+                           currentMarketType === 'team_totals' ? 'Home Team Total' : 
+                           currentMarketType.startsWith('player_') ? 'Under' :
                            gameWithOptions.game.home_team}
                         </h5>
                         <div className="space-y-2">
-                          {Object.entries(outcomes).map(([outcomeKey, outcome]) => {
-                            // Filter for home team or over outcomes
-                            const isRelevantOutcome = marketType === 'totals' 
-                              ? outcome.outcome_name.toLowerCase().includes('over')
-                              : marketType === 'team_totals'
-                                ? outcome.outcome_name === gameWithOptions.game.home_team
-                                : marketType.startsWith('player_')
-                                  ? outcome.outcome_name.toLowerCase().includes('under') // Show under bets in right section
-                                  : marketType === 'h2h' 
-                                    ? outcome.outcome_name === gameWithOptions.game.home_team
-                                    : marketType === 'spreads'
+                          {(() => {
+                            // Filter outcomes for right section
+                            const filteredOutcomes = Object.entries(outcomes).filter(([outcomeKey, outcome]) => {
+                              const isRelevantOutcome = currentMarketType === 'totals' 
+                                ? outcome.outcome_name.toLowerCase().includes('over')
+                                : currentMarketType === 'team_totals'
+                                  ? outcome.outcome_name === gameWithOptions.game.home_team
+                                  : currentMarketType.startsWith('player_')
+                                    ? outcome.outcome_name.toLowerCase().includes('under') // Show under bets in right section
+                                    : currentMarketType === 'h2h' 
                                       ? outcome.outcome_name === gameWithOptions.game.home_team
-                                      : false;
+                                      : currentMarketType === 'spreads'
+                                        ? outcome.outcome_name === gameWithOptions.game.home_team
+                                        : false;
+                              return isRelevantOutcome;
+                            });
 
-                            if (!isRelevantOutcome) return null;
+                            // Show empty state if no outcomes
+                            if (filteredOutcomes.length === 0) {
+                              return (
+                                <div className="text-center py-8 text-gray-400">
+                                  <div className="text-sm">No betting options available</div>
+                                </div>
+                              );
+                            }
+
+                            // Render filtered outcomes
+                            return filteredOutcomes.map(([outcomeKey, outcome]) => {
 
                             return (
                               <div key={outcomeKey} className="flex justify-between items-center p-2 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
                                 <div className="flex-1">
                                   <div className="font-medium text-white text-sm">
-                                    {getOutcomeDisplayName(outcome, marketType)}
+                                    {getOutcomeDisplayName(outcome, currentMarketType)}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -622,7 +700,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                                 addToBetslip({
                                                   id: bestOdds.id,
                                                   game_id: gameWithOptions.game.id,
-                                                  market_type: marketType,
+                                                  market_type: currentMarketType,
                                                   outcome_name: outcome.outcome_name,
                                                   outcome_point: outcome.outcome_point,
                                                   bookmaker: bestOdds.bookmaker,
@@ -659,7 +737,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                                 addToParlay({
                                                   id: bestOdds.id,
                                                   game_id: gameWithOptions.game.id,
-                                                  market_type: marketType,
+                                                  market_type: currentMarketType,
                                                   outcome_name: outcome.outcome_name,
                                                   outcome_point: outcome.outcome_point,
                                                   bookmaker: bestOdds.bookmaker,
@@ -686,7 +764,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                           onClick={() => setPopupBookmakers({
                                             outcomeKey,
                                             bookmakers: outcome.bookmakers,
-                                            outcomeName: getOutcomeDisplayName(outcome, marketType)
+                                            outcomeName: getOutcomeDisplayName(outcome, currentMarketType)
                                           })}
                                         >
                                           +{outcome.bookmakers.length - 1}
@@ -697,14 +775,15 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                 </div>
                               </div>
                             );
-                          })}
+                            });
+                          })()}
                         </div>
                       </div>
                     </div>
                   </div>
-                </TabsContent>
-              ))}
-            </Tabs>
+                );
+              })()}
+            </div>
             </CardContent>
           )}
         </Card>
@@ -912,3 +991,4 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
     </div>
   );
 };
+
