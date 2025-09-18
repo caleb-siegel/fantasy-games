@@ -440,7 +440,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                         <h5 className="font-semibold text-sm text-white text-center mb-3">
                           {marketType === 'totals' ? 'Under' : 
                            marketType === 'team_totals' ? 'Away Team Total' : 
-                           marketType.startsWith('player_') ? 'Player Props' :
+                           marketType.startsWith('player_') ? 'Over' :
                            gameWithOptions.game.away_team}
                         </h5>
                         <div className="space-y-2">
@@ -451,7 +451,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                               : marketType === 'team_totals'
                                 ? outcome.outcome_name === gameWithOptions.game.away_team
                                 : marketType.startsWith('player_')
-                                  ? outcome.player_name // Show all player props in both sections
+                                  ? outcome.outcome_name.toLowerCase().includes('over') // Show over bets in left section
                                   : marketType === 'h2h' 
                                     ? outcome.outcome_name === gameWithOptions.game.away_team
                                     : marketType === 'spreads'
@@ -573,7 +573,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                         <h5 className="font-semibold text-sm text-white text-center mb-3">
                           {marketType === 'totals' ? 'Over' : 
                            marketType === 'team_totals' ? 'Home Team Total' : 
-                           marketType.startsWith('player_') ? 'Player Props' :
+                           marketType.startsWith('player_') ? 'Under' :
                            gameWithOptions.game.home_team}
                         </h5>
                         <div className="space-y-2">
@@ -584,7 +584,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                               : marketType === 'team_totals'
                                 ? outcome.outcome_name === gameWithOptions.game.home_team
                                 : marketType.startsWith('player_')
-                                  ? outcome.player_name // Show all player props in both sections
+                                  ? outcome.outcome_name.toLowerCase().includes('under') // Show under bets in right section
                                   : marketType === 'h2h' 
                                     ? outcome.outcome_name === gameWithOptions.game.home_team
                                     : marketType === 'spreads'
