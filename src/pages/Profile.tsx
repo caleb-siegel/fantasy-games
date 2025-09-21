@@ -50,8 +50,8 @@ export default function Profile() {
         setLoading(true)
         
         // Fetch comprehensive betting statistics
-        const bettingStatsResponse = await apiService.getUserBettingStats()
-        const bettingStats = bettingStatsResponse || {}
+        const bettingStatsResponse: any = await apiService.getUserBettingStats()
+        const bettingStats: any = bettingStatsResponse || {}
         
         // Fetch user's league data
         const leaguesResponse = await apiService.getUserLeagues()
@@ -61,14 +61,14 @@ export default function Profile() {
         setUserLeagues(leagues)
         
         // Try to get betting data for multiple weeks to find where the user has bets
-        let currentWeekData = {}
+        let currentWeekData: any = {}
         let foundWeek = 1
         
         // Try weeks 1-17 to find where user has betting activity
         for (let week = 1; week <= 17; week++) {
           try {
             const betsResponse = await apiService.getUserBets(week)
-            const weekData = betsResponse || {}
+            const weekData: any = betsResponse || {}
             
             
             // If this week has any betting activity, use it
@@ -227,8 +227,8 @@ export default function Profile() {
         })
         
         // Refresh user stats to show updated data
-        const bettingStatsResponse = await apiService.getUserBettingStats()
-        const bettingStats = bettingStatsResponse || {}
+        const bettingStatsResponse: any = await apiService.getUserBettingStats()
+        const bettingStats: any = bettingStatsResponse || {}
         
         // Also refresh current week data to get updated parlay info
         const currentWeekData = await apiService.getUserBets(prev.foundWeek)

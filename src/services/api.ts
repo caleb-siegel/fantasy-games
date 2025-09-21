@@ -150,6 +150,7 @@ class ApiService {
         game: any;
         betting_options: any;
       }>;
+      market_types: string[];
     }>(`/api/bets/options/week/${week}`);
   }
 

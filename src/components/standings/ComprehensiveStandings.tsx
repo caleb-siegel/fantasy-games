@@ -54,7 +54,7 @@ export function ComprehensiveStandings({ leagueId }: ComprehensiveStandingsProps
     try {
       setLoading(true);
       // Use the comprehensive standings API
-      const response = await apiService.getComprehensiveStandings(leagueId);
+      const response: any = await apiService.getComprehensiveStandings(leagueId);
       setStandings(response.standings);
     } catch (error) {
       console.error('Failed to load standings:', error);
