@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { X, ShoppingCart, DollarSign, TrendingUp } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { isGameLocked } from '@/utils/dateUtils';
 
 interface DenormalizedBet {
   id?: number;
@@ -51,9 +52,7 @@ export const Betslip: React.FC<BetslipProps> = ({
 
   // Helper function to check if a bet is locked (game has started)
   const isBetLocked = (bet: BetslipBet) => {
-    const gameStartTime = new Date(bet.bettingOption.start_time);
-    const now = new Date();
-    return now >= gameStartTime;
+    return isGameLocked(bet.bettingOption.start_time);
   };
 
   const getMarketDisplayName = (marketType: string) => {

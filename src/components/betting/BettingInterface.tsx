@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CompactBetslip } from './CompactBetslip';
 import { BettingOption as ParlayBettingOption, calculateParlayFromOptions } from '@/utils/parlayUtils';
 import { toast } from 'sonner';
-import { getDetailedGameDateTime } from '@/utils/dateUtils';
+import { getDetailedGameDateTime, isGameLocked } from '@/utils/dateUtils';
 
 interface BettingOption {
   id: number;
@@ -119,18 +119,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
   const [placingParlay, setPlacingParlay] = useState(false);
 
   const betslipTotalAmount = betslipBets.reduce((sum, bet) => sum + bet.amount, 0);
-  
-  // Helper function to check if a game is locked (has started)
-  const isGameLocked = (startTime: string) => {
-    const gameStartTime = new Date(startTime);
-    const now = new Date();
-    
-    // Add a small buffer (5 minutes) to account for timezone differences and prevent edge cases
-    const bufferMinutes = 5;
-    const bufferTime = new Date(now.getTime() + (bufferMinutes * 60 * 1000));
-    
-    return bufferTime >= gameStartTime;
-  };
   
   // Calculate parlay stake for betslip display
   const parlayCalculation = parlayBets.length >= 2 ? calculateParlayFromOptions(10, parlayBets) : null;
@@ -321,6 +309,9 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
       american_odds: bettingOption.american_odds,
       decimal_odds: bettingOption.decimal_odds,
       is_locked: bettingOption.is_locked,
+      home_team: gameInfo.home_team,
+      away_team: gameInfo.away_team,
+      start_time: gameInfo.start_time,
       gameInfo: gameInfo
     } as ParlayBettingOption;
 

@@ -8,8 +8,9 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, DollarSign, TrendingUp, Clock, AlertTriangle, X, Calculator, ChevronDown, ChevronUp } from 'lucide-react';
-import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useCurrentWeek } from '@/hooks/useWeekManagement';
+import { apiService } from '@/services/api';
 import { toast } from 'sonner';
 import { calculateParlayFromOptions } from '@/utils/parlayUtils';
 
@@ -50,6 +51,11 @@ interface ParlayBettingOption {
   home_team: string;
   away_team: string;
   start_time: string;
+  gameInfo: {
+    home_team: string;
+    away_team: string;
+    start_time: string;
+  };
 }
 
 interface BettingReviewProps {
@@ -66,6 +72,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   const navigate = useNavigate();
   const { leagueId } = useParams<{ leagueId: string }>();
   const { user } = useAuth();
+  const { currentWeek } = useCurrentWeek();
   const [betslipBets, setBetslipBets] = useState<BetslipBet[]>([]);
   const [parlayBets, setParlayBets] = useState<ParlayBettingOption[]>([]);
   const [parlayStake, setParlayStake] = useState<number>(0);
@@ -77,7 +84,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   const [userBets, setUserBets] = useState<any[]>([]);
   const [remainingBalance, setRemainingBalance] = useState<number>(100);
   const [matchupId, setMatchupId] = useState<number>(propMatchupId || 0);
-  const [week, setWeek] = useState<number>(propWeek || 1);
+  const [week, setWeek] = useState<number>(propWeek || currentWeek || 1);
 
   // Calculate parlay information
   const parlayCalculation = parlayBets.length >= 1 ? calculateParlayFromOptions(parlayStake, parlayBets) : null;
@@ -99,7 +106,8 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       const weekValue = parseInt(storedWeek);
       setWeek(weekValue);
     } else {
-      console.log(`🔍 No week found in sessionStorage, using default: ${propWeek || 1}`);
+      console.log(`🔍 No week found in sessionStorage, using current week: ${currentWeek || propWeek || 1}`);
+      setWeek(currentWeek || propWeek || 1);
     }
     
     if (storedBets) {
@@ -129,6 +137,15 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
 
     // loadUserBets and loadMatchupData will be called when week changes
   }, []);
+
+  // Update week when currentWeek changes (if no sessionStorage week)
+  useEffect(() => {
+    const storedWeek = sessionStorage.getItem('bettingWeek');
+    if (!storedWeek && currentWeek && currentWeek !== week) {
+      console.log(`🔄 Updating week from ${week} to current week: ${currentWeek}`);
+      setWeek(currentWeek);
+    }
+  }, [currentWeek, week]);
 
   // Load matchup data when week changes
   useEffect(() => {
@@ -282,7 +299,10 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   };
 
   const formatGameTime = (startTime: string) => {
-    const date = new Date(startTime);
+    // Ensure the date string is treated as UTC
+    const date = new Date(startTime.includes('Z') || startTime.includes('+') || startTime.includes('-', 10) 
+      ? startTime 
+      : startTime + 'Z');
     const now = new Date();
     const timeDiff = date.getTime() - now.getTime();
     

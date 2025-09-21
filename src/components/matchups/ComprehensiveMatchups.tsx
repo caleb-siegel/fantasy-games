@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, Calendar, Clock, Trophy, Target, Eye, RefreshCw, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiService } from '@/services/api';
-import { formatGameDateTime, getCompactGameDateTime } from '@/utils/dateUtils';
+import { formatGameDateTime, getCompactGameDateTime, isGameStarted } from '@/utils/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 
 interface MatchupDetail {
@@ -136,7 +136,7 @@ export function ComprehensiveMatchups({
         // Check if this leg's game has started
         const legStartTime = leg.start_time;
         if (!legStartTime) return false;
-        return now >= new Date(legStartTime);
+        return isGameStarted(legStartTime);
       });
     }
     
@@ -146,10 +146,7 @@ export function ComprehensiveMatchups({
       return false; // Hide if no start time available
     }
     
-    const now = new Date();
-    const startTime = new Date(gameStartTime);
-    
-    return now >= startTime;
+    return isGameStarted(gameStartTime);
   };
 
   // Helper function to filter bets based on visibility rules
