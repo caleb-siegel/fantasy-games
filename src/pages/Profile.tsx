@@ -441,57 +441,6 @@ export default function Profile() {
                       </div>
                     </CardContent>
                   </Card>
-
-                  {/* Manual Bet Validation Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <RefreshCw className="w-5 h-5" />
-                        Bet Validation
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                          Manually check ESPN API for latest game results and validate your pending bets.
-                        </p>
-                        
-                        <Button 
-                          onClick={handleManualBetValidation}
-                          disabled={validatingBets}
-                          className="w-full"
-                          variant="outline"
-                        >
-                          {validatingBets ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Validating Bets...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              Check Bet Status
-                            </>
-                          )}
-                        </Button>
-
-                        {validationStatus.type && (
-                          <div className={`flex items-center gap-2 p-3 rounded-md ${
-                            validationStatus.type === 'success' 
-                              ? 'bg-green-50 text-green-700 border border-green-200' 
-                              : 'bg-red-50 text-red-700 border border-red-200'
-                          }`}>
-                            {validationStatus.type === 'success' ? (
-                              <CheckCircle className="w-4 h-4" />
-                            ) : (
-                              <AlertCircle className="w-4 h-4" />
-                            )}
-                            <span className="text-sm">{validationStatus.message}</span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
                 </div>
 
                 <Card>
