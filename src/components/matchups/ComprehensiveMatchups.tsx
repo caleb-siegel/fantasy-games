@@ -360,6 +360,9 @@ export function ComprehensiveMatchups({
       return `${leg.outcome_name} ${leg.outcome_point}`;
     } else if (leg.market_type === 'h2h') {
       return `${leg.outcome_name}`;
+    } else if (leg.market_type.startsWith('player_')) {
+      const marketType = getMarketDisplayName(leg.market_type);
+      return `${marketType} - ${leg.player_name} ${leg.outcome_name} ${leg.outcome_point || ''}`;
     }
     return `${leg.market_type}: ${leg.player_name} ${leg.outcome_name} ${leg.outcome_point || ''}`
   };
