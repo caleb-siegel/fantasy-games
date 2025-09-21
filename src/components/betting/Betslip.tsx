@@ -64,7 +64,21 @@ export const Betslip: React.FC<BetslipProps> = ({
       case 'spreads': return 'Spread';
       case 'totals': return 'Total';
       case 'team_totals': return 'Team Total';
-      default: return marketType;
+      case 'player_pass_tds': return 'Pass TDs';
+      case 'player_pass_yds': return 'Pass Yards';
+      case 'player_rush_yds': return 'Rush Yards';
+      case 'player_receptions': return 'Receptions';
+      case 'player_pass_completions': return 'Completions';
+      case 'player_rush_att': return 'Rush Attempts';
+      case 'player_pass_att': return 'Pass Attempts';
+      case 'player_receiving_yds': return 'Receiving Yards';
+      case 'player_receiving_tds': return 'Receiving TDs';
+      case 'player_rushing_tds': return 'Rushing TDs';
+      default: 
+        // Convert snake_case to Title Case
+        return marketType.split('_').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
     }
   };
 
@@ -83,11 +97,12 @@ export const Betslip: React.FC<BetslipProps> = ({
       const playerName = bettingOption.player_name || 'Player'; // Fallback if player_name not available
       const outcome = bettingOption.outcome_name; // "Over" or "Under"
       const line = bettingOption.outcome_point;
+      const marketType = getMarketDisplayName(bettingOption.market_type);
       
       if (line !== null && line !== undefined) {
-        return `${playerName} ${outcome} ${line}`;
+        return `${marketType} - ${playerName} ${outcome} ${line}`;
       } else {
-        return `${playerName} ${outcome}`;
+        return `${marketType} - ${playerName} ${outcome}`;
       }
     }
     

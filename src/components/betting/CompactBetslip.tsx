@@ -107,11 +107,12 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
       const playerName = bettingOption.player_name || 'Player'; // Fallback if player_name not available
       const outcome = bettingOption.outcome_name; // "Over" or "Under"
       const line = bettingOption.outcome_point;
+      const marketType = getMarketDisplayName(bettingOption.market_type);
       
       if (line !== null && line !== undefined) {
-        return `${bettingOption.market_type} - ${playerName} ${outcome} ${line}`;
+        return `${marketType} - ${playerName} ${outcome} ${line}`;
       } else {
-        return `${playerName} ${outcome}`;
+        return `${marketType} - ${playerName} ${outcome}`;
       }
     }
     
@@ -133,7 +134,18 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
       return `${leg.outcome_name} ${leg.outcome_point && leg.outcome_point > 0 ? '+' : ''}${leg.outcome_point}`;
     } else if (leg.market_type === 'team_totals') {
       return `${leg.outcome_name} ${leg.outcome_point}`;
-    }
+    } else if (leg.market_type.startsWith('player_')) {      
+        const playerName = leg.player_name || 'Player'; // Fallback if player_name not available
+        const outcome = leg.outcome_name; // "Over" or "Under"
+        const line = leg.outcome_point;
+        const marketType = getMarketDisplayName(leg.market_type);
+        
+        if (line !== null && line !== undefined) {
+          return `${marketType} - ${playerName} ${outcome} ${line}`;
+        } else {
+          return `${marketType} - ${playerName} ${outcome}`;
+        }
+      }
     return leg.outcome_name;
   };
 

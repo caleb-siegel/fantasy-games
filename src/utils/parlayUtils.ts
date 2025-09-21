@@ -11,6 +11,7 @@ export interface BettingOption {
   market_type: string;
   outcome_name: string;
   outcome_point: number | null;
+  player_name?: string;
   bookmaker: string;
   american_odds: number;
   decimal_odds: number;
@@ -28,6 +29,7 @@ export interface ParlayLeg {
   game_id: string;
   outcome_name: string;
   outcome_point: number | null;
+  player_name?: string;
   market_type: string;
   bookmaker: string;
   american_odds: number;
@@ -131,6 +133,7 @@ export function calculateParlayFromOptions(stake: number, bettingOptions: Bettin
     game_id: option.game_id,
     outcome_name: option.outcome_name,
     outcome_point: option.outcome_point,
+    player_name: option.player_name,
     market_type: option.market_type,
     bookmaker: option.bookmaker,
     american_odds: option.american_odds,
@@ -160,7 +163,21 @@ export function getMarketDisplayName(marketType: string): string {
     case 'spreads': return 'Spread';
     case 'totals': return 'Total';
     case 'team_totals': return 'Team Total';
-    default: return marketType;
+    case 'player_pass_tds': return 'Pass TDs';
+    case 'player_pass_yds': return 'Pass Yards';
+    case 'player_rush_yds': return 'Rush Yards';
+    case 'player_receptions': return 'Receptions';
+    case 'player_pass_completions': return 'Completions';
+    case 'player_rush_att': return 'Rush Attempts';
+    case 'player_pass_att': return 'Pass Attempts';
+    case 'player_receiving_yds': return 'Receiving Yards';
+    case 'player_receiving_tds': return 'Receiving TDs';
+    case 'player_rushing_tds': return 'Rushing TDs';
+    default: 
+      // Convert snake_case to Title Case
+      return marketType.split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
   }
 }
 
@@ -168,6 +185,18 @@ export function getMarketDisplayName(marketType: string): string {
  * Get outcome display name with point information
  */
 export function getOutcomeDisplayName(option: BettingOption): string {
+  if (option.market_type.startsWith('player_')) {
+    const playerName = option.player_name || 'Player'; // Fallback if player_name not available
+    const outcome = option.outcome_name; // "Over" or "Under"
+    const line = option.outcome_point;
+    const marketType = getMarketDisplayName(option.market_type);
+    
+    if (line !== null && line !== undefined) {
+      return `${marketType} - ${playerName} ${outcome} ${line}`;
+    } else {
+      return `${marketType} - ${playerName} ${outcome}`;
+    }
+  }
   if (option.market_type === 'totals') {
     return `${option.outcome_name} ${option.outcome_point}`;
   } else if (option.market_type === 'spreads') {

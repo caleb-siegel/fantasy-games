@@ -285,7 +285,22 @@ export function ComprehensiveMatchups({
       case 'h2h': return 'Moneyline';
       case 'spreads': return 'Spread';
       case 'totals': return 'Total';
-      default: return marketType;
+      case 'team_totals': return 'Team Total';
+      case 'player_pass_tds': return 'Pass TDs';
+      case 'player_pass_yds': return 'Pass Yards';
+      case 'player_rush_yds': return 'Rush Yards';
+      case 'player_receptions': return 'Receptions';
+      case 'player_pass_completions': return 'Completions';
+      case 'player_rush_att': return 'Rush Attempts';
+      case 'player_pass_att': return 'Pass Attempts';
+      case 'player_receiving_yds': return 'Receiving Yards';
+      case 'player_receiving_tds': return 'Receiving TDs';
+      case 'player_rushing_tds': return 'Rushing TDs';
+      default: 
+        // Convert snake_case to Title Case
+        return marketType.split('_').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
     }
   };
 
