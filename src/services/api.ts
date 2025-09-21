@@ -427,7 +427,7 @@ class ApiService {
       body: JSON.stringify({
         matchup_id: data.matchupId,
         betting_option_ids: data.bettingOptionIds,
-        amount: data.amount
+        amount: data.amount,
       }),
     });
   }

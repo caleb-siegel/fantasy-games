@@ -3,12 +3,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, ShoppingCart, ArrowRight, ChevronDown, ChevronUp, Calculator, Plus, Clock } from 'lucide-react';
-import { BettingOption as ParlayBettingOption, calculateParlayFromOptions, formatAmericanOdds, getOutcomeDisplayName, getMarketDisplayName } from '@/utils/parlayUtils';
+import { BettingOption as ParlayBettingOption, calculateParlayFromOptions, formatAmericanOdds, getMarketDisplayName } from '@/utils/parlayUtils';
 import { getCompactGameDateTime } from '@/utils/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 
-interface BettingOption {
-  id: number;
+interface DenormalizedBet {
+  id?: number;
   game_id: string;
   market_type: string;
   outcome_name: string;
@@ -16,16 +16,15 @@ interface BettingOption {
   bookmaker: string;
   american_odds: number;
   decimal_odds: number;
+  player_name?: string;
+  home_team: string;
+  away_team: string;
+  start_time: string;
 }
 
 interface BetslipBet {
-  bettingOption: BettingOption;
+  bettingOption: DenormalizedBet;
   amount: number;
-  gameInfo: {
-    home_team: string;
-    away_team: string;
-    start_time: string;
-  };
 }
 
 interface ParlayBet {
@@ -95,6 +94,28 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
 
   const getOutcomeDisplayName = (bet: BetslipBet) => {
     const { bettingOption } = bet;
+    
+    // Safety check
+    if (!bettingOption) {
+      console.warn('bettingOption is undefined for bet:', bet);
+      return 'Unknown Bet';
+    }
+    
+    
+    // Handle player prop bets
+    if (bettingOption.market_type.startsWith('player_')) {
+      const playerName = bettingOption.player_name || 'Player'; // Fallback if player_name not available
+      const outcome = bettingOption.outcome_name; // "Over" or "Under"
+      const line = bettingOption.outcome_point;
+      
+      if (line !== null && line !== undefined) {
+        return `${bettingOption.market_type} - ${playerName} ${outcome} ${line}`;
+      } else {
+        return `${playerName} ${outcome}`;
+      }
+    }
+    
+    // Handle other bet types
     if (bettingOption.market_type === 'totals') {
       return `${bettingOption.outcome_name} ${bettingOption.outcome_point}`;
     } else if (bettingOption.market_type === 'spreads') {
@@ -244,37 +265,45 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
               )}
               
               {/* Single Bets */}
-              {bets.slice().reverse().map((bet, index) => (
-                <Card key={bets.length - 1 - index} className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-white text-sm truncate">
-                          {bet.gameInfo.away_team} @ {bet.gameInfo.home_team}
+              {bets.slice().reverse().map((bet, index) => {
+                // Safety check for denormalized data
+                if (!bet.bettingOption) {
+                  console.warn('Bet missing bettingOption:', bet);
+                  return null;
+                }
+                
+                return (
+                  <Card key={bets.length - 1 - index} className="bg-gray-800 border-gray-700">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-white text-sm truncate">
+                            {bet.bettingOption.away_team} @ {bet.bettingOption.home_team}
+                          </div>
+                          <div className="text-xs text-gray-400 truncate">
+                            {getOutcomeDisplayName(bet)} • {formatOdds(bet.bettingOption.american_odds)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            ${bet.amount} • {bet.bettingOption.bookmaker}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {getCompactGameDateTime(bet.bettingOption.start_time, user?.timezone || 'America/New_York')}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-400 truncate">
-                          {getOutcomeDisplayName(bet)} • {formatOdds(bet.bettingOption.american_odds)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          ${bet.amount} • {bet.bettingOption.bookmaker}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {getCompactGameDateTime(bet.gameInfo.start_time, user?.timezone || 'America/New_York')}
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRemoveBet(bets.length - 1 - index)}
+                          className="text-gray-400 hover:text-white p-1 h-6 w-6 flex-shrink-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveBet(bets.length - 1 - index)}
-                        className="text-gray-400 hover:text-white p-1 h-6 w-6 flex-shrink-0"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : null}
 
@@ -418,7 +447,7 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-white text-sm truncate">
-                            {bet.gameInfo.away_team} @ {bet.gameInfo.home_team}
+                            {bet.bettingOption.away_team} @ {bet.bettingOption.home_team}
                           </div>
                           <div className="text-xs text-gray-400 truncate">
                             {getOutcomeDisplayName(bet)} • {formatOdds(bet.bettingOption.american_odds)}
@@ -428,7 +457,7 @@ export const CompactBetslip: React.FC<CompactBetslipProps> = ({
                           </div>
                           <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {getCompactGameDateTime(bet.gameInfo.start_time, user?.timezone || 'America/New_York')}
+                            {getCompactGameDateTime(bet.bettingOption.start_time, user?.timezone || 'America/New_York')}
                           </div>
                         </div>
                         <Button

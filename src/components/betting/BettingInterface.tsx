@@ -25,6 +25,22 @@ interface BettingOption {
   american_odds: number;
   decimal_odds: number;
   is_locked?: boolean;
+  player_name?: string; // For player props
+}
+
+interface DenormalizedBet {
+  id?: number;
+  game_id: string;
+  market_type: string;
+  outcome_name: string;
+  outcome_point: number | null;
+  bookmaker: string;
+  american_odds: number;
+  decimal_odds: number;
+  player_name?: string;
+  home_team: string;
+  away_team: string;
+  start_time: string;
 }
 
 interface Game {
@@ -66,13 +82,8 @@ interface UserBet {
 }
 
 interface BetslipBet {
-  bettingOption: BettingOption;
+  bettingOption: DenormalizedBet;
   amount: number;
-  gameInfo: {
-    home_team: string;
-    away_team: string;
-    start_time: string;
-  };
 }
 
 interface BettingInterfaceProps {
@@ -113,7 +124,12 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
   const isGameLocked = (startTime: string) => {
     const gameStartTime = new Date(startTime);
     const now = new Date();
-    return now >= gameStartTime;
+    
+    // Add a small buffer (5 minutes) to account for timezone differences and prevent edge cases
+    const bufferMinutes = 5;
+    const bufferTime = new Date(now.getTime() + (bufferMinutes * 60 * 1000));
+    
+    return bufferTime >= gameStartTime;
   };
   
   // Calculate parlay stake for betslip display
@@ -138,6 +154,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
 
       const optionsResponse = await apiService.getWeeklyBettingOptions(week);
       setGames(optionsResponse.games);
+      console.log('🔍 Games:', optionsResponse.games);
       setAvailableMarketTypes(optionsResponse.market_types || []);
 
       // Initialize selected market types for each game
@@ -190,7 +207,20 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
         const updatedBets = [...betslipBets];
         updatedBets[existingBetIndex] = {
           ...existingBet,
-          bettingOption: bettingOption,
+          bettingOption: {
+            id: bettingOption.id,
+            game_id: bettingOption.game_id,
+            market_type: bettingOption.market_type,
+            outcome_name: bettingOption.outcome_name,
+            outcome_point: bettingOption.outcome_point,
+            bookmaker: bettingOption.bookmaker,
+            american_odds: bettingOption.american_odds,
+            decimal_odds: bettingOption.decimal_odds,
+            player_name: bettingOption.player_name,
+            home_team: gameInfo.home_team,
+            away_team: gameInfo.away_team,
+            start_time: gameInfo.start_time
+          },
           amount: Math.min(existingBet.amount, remainingBalance)
         };
         setBetslipBets(updatedBets);
@@ -203,9 +233,21 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
       if (amount < 0) return;
 
       setBetslipBets([...betslipBets, {
-        bettingOption,
-        amount,
-        gameInfo
+        bettingOption: {
+          id: bettingOption.id,
+          game_id: bettingOption.game_id,
+          market_type: bettingOption.market_type,
+          outcome_name: bettingOption.outcome_name,
+          outcome_point: bettingOption.outcome_point,
+          bookmaker: bettingOption.bookmaker,
+          american_odds: bettingOption.american_odds,
+          decimal_odds: bettingOption.decimal_odds,
+          player_name: bettingOption.player_name,
+          home_team: gameInfo.home_team,
+          away_team: gameInfo.away_team,
+          start_time: gameInfo.start_time
+        },
+        amount
       }]);
     }
   };
@@ -231,6 +273,24 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
       newExpandedGames.add(gameId);
     }
     setExpandedGames(newExpandedGames);
+  };
+
+  const getUserTimezone = () => {
+    // Try to get user's timezone from their profile first
+    if (user?.timezone) {
+      console.log('🌍 Using user profile timezone:', user.timezone);
+      return user.timezone;
+    }
+    
+    // Fallback to browser's detected timezone
+    try {
+      const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      console.log('🌍 Using browser detected timezone:', browserTimezone);
+      return browserTimezone;
+    } catch (error) {
+      console.warn('Could not detect timezone, falling back to Eastern Time:', error);
+      return 'America/New_York';
+    }
   };
 
   const handleMarketTypeChange = (gameId: string, marketType: string) => {
@@ -376,11 +436,15 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
   const getOutcomeDisplayName = (outcome: any, marketType: string) => {
     if (marketType.startsWith('player_')) {
       // For player props, show player name and outcome
-      const playerName = outcome.player_name || outcome.outcome_name;
-      if (outcome.outcome_point) {
-        return `${playerName} ${outcome.outcome_name} ${outcome.outcome_point}`;
+      const playerName = outcome.player_name || 'Player'; // Fallback if player_name not available
+      const outcomeText = outcome.outcome_name; // "Over" or "Under"
+      const line = outcome.outcome_point;
+      
+      if (line !== null && line !== undefined) {
+        return `${playerName} ${outcomeText} ${line}`;
+      } else {
+        return `${playerName} ${outcomeText}`;
       }
-      return `${playerName} ${outcome.outcome_name}`;
     } else if (marketType === 'spreads' && outcome.outcome_point) {
       return `${outcome.outcome_name} ${outcome.outcome_point}`;
     } else if (marketType === 'totals' && outcome.outcome_point) {
@@ -421,7 +485,16 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 text-sm text-gray-400 font-medium">
                   <Clock className="h-4 w-4" />
-                  {getDetailedGameDateTime(gameWithOptions.game.start_time, user?.timezone || 'America/New_York')}
+                  {(() => {
+                    const userTimezone = getUserTimezone();
+                    const formattedTime = getDetailedGameDateTime(gameWithOptions.game.start_time, userTimezone);
+                    console.log(`🕐 Game time for ${gameWithOptions.game.away_team} @ ${gameWithOptions.game.home_team}:`, {
+                      originalTime: gameWithOptions.game.start_time,
+                      userTimezone,
+                      formattedTime
+                    });
+                    return formattedTime;
+                  })()}
                 </div>
                 {expandedGames.has(gameWithOptions.game.id) ? (
                   <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -497,7 +570,9 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                         <div className="space-y-2">
                           {(() => {
                             // Filter outcomes for left section
+                            
                             const filteredOutcomes = Object.entries(outcomes).filter(([outcomeKey, outcome]) => {
+                              
                               const isRelevantOutcome = currentMarketType === 'totals' 
                                 ? outcome.outcome_name.toLowerCase().includes('under')
                                 : currentMarketType === 'team_totals'
@@ -558,7 +633,8 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                                   outcome_point: outcome.outcome_point,
                                                   bookmaker: bestOdds.bookmaker,
                                                   american_odds: bestOdds.american_odds,
-                                                  decimal_odds: bestOdds.decimal_odds
+                                                  decimal_odds: bestOdds.decimal_odds,
+                                                  player_name: outcome.player_name
                                                 }, {
                                                   home_team: gameWithOptions.game.home_team,
                                                   away_team: gameWithOptions.game.away_team,
@@ -644,6 +720,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                         <div className="space-y-2">
                           {(() => {
                             // Filter outcomes for right section
+                            console.log('🔍 Player props - All outcomes (right):', Object.entries(outcomes));
                             const filteredOutcomes = Object.entries(outcomes).filter(([outcomeKey, outcome]) => {
                               const isRelevantOutcome = currentMarketType === 'totals' 
                                 ? outcome.outcome_name.toLowerCase().includes('over')
@@ -705,7 +782,8 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                                                   outcome_point: outcome.outcome_point,
                                                   bookmaker: bestOdds.bookmaker,
                                                   american_odds: bestOdds.american_odds,
-                                                  decimal_odds: bestOdds.decimal_odds
+                                                  decimal_odds: bestOdds.decimal_odds,
+                                                  player_name: outcome.player_name
                                                 }, {
                                                   home_team: gameWithOptions.game.home_team,
                                                   away_team: gameWithOptions.game.away_team,
@@ -963,7 +1041,8 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                           outcome_point: null,
                           bookmaker: bookmaker.bookmaker,
                           american_odds: bookmaker.american_odds,
-                          decimal_odds: bookmaker.decimal_odds
+                          decimal_odds: bookmaker.decimal_odds,
+                          player_name: popupBookmakers.outcomeName.includes(' ') ? popupBookmakers.outcomeName.split(' ').slice(0, -2).join(' ') : undefined
                         }, {
                           home_team: gameInfo.game.home_team,
                           away_team: gameInfo.game.away_team,

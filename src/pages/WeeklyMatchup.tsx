@@ -44,7 +44,27 @@ interface UserBet {
   potential_payout: number;
   status: string;
   created_at: string;
-  betting_option: {
+  // Denormalized betting option data
+  game_id?: string;
+  market_type?: string;
+  outcome_name?: string;
+  outcome_point?: number | null;
+  bookmaker?: string;
+  odds_snapshot_american?: number;
+  odds_snapshot_decimal?: number;
+  player_name?: string;
+  // Denormalized game data
+  home_team?: string;
+  away_team?: string;
+  start_time?: string;
+  result?: string;
+  home_score?: number;
+  away_score?: number;
+  total_points?: number;
+  point_spread?: number;
+  is_final?: boolean;
+  // Fallback to betting_option relationship
+  betting_option?: {
     id: number;
     game_id: string;
     market_type: string;
@@ -366,13 +386,13 @@ export default function WeeklyMatchup() {
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <div className="font-medium text-sm">
-                                  {bet.betting_option.game.home_team} vs {bet.betting_option.game.away_team}
+                                  {bet.home_team || bet.betting_option?.game?.home_team} vs {bet.away_team || bet.betting_option?.game?.away_team}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {bet.betting_option.outcome_name} {bet.betting_option.outcome_point && `(${bet.betting_option.outcome_point})`}
+                                  {bet.outcome_name || bet.betting_option?.outcome_name} {(bet.outcome_point || bet.betting_option?.outcome_point) && `(${bet.outcome_point || bet.betting_option?.outcome_point})`}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {bet.betting_option.bookmaker} • {bet.betting_option.american_odds > 0 ? '+' : ''}{bet.betting_option.american_odds}
+                                  {bet.bookmaker || bet.betting_option?.bookmaker} • {(bet.odds_snapshot_american || bet.betting_option?.american_odds) > 0 ? '+' : ''}{bet.odds_snapshot_american || bet.betting_option?.american_odds}
                                 </div>
                               </div>
                               <div className="text-right">
@@ -401,13 +421,13 @@ export default function WeeklyMatchup() {
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <div className="font-medium text-sm">
-                                  {bet.betting_option.game.home_team} vs {bet.betting_option.game.away_team}
+                                  {bet.home_team || bet.betting_option?.game?.home_team} vs {bet.away_team || bet.betting_option?.game?.away_team}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {bet.betting_option.outcome_name} {bet.betting_option.outcome_point && `(${bet.betting_option.outcome_point})`}
+                                  {bet.outcome_name || bet.betting_option?.outcome_name} {(bet.outcome_point || bet.betting_option?.outcome_point) && `(${bet.outcome_point || bet.betting_option?.outcome_point})`}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {bet.betting_option.bookmaker} • {bet.betting_option.american_odds > 0 ? '+' : ''}{bet.betting_option.american_odds}
+                                  {bet.bookmaker || bet.betting_option?.bookmaker} • {(bet.odds_snapshot_american || bet.betting_option?.american_odds) > 0 ? '+' : ''}{bet.odds_snapshot_american || bet.betting_option?.american_odds}
                                 </div>
                               </div>
                               <div className="text-right">

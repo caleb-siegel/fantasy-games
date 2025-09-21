@@ -39,7 +39,27 @@ interface BetSummary {
   actual_payout?: number;
   status: 'pending' | 'won' | 'lost' | 'cancelled';
   outcome?: 'won' | 'lost' | 'pending' | 'cancelled';
-  betting_option: {
+  player_name?: string;
+  // Denormalized betting option data
+  game_id?: string;
+  market_type?: string;
+  outcome_name?: string;
+  outcome_point?: number | null;
+  bookmaker?: string;
+  odds_snapshot_american?: number;
+  odds_snapshot_decimal?: number;
+  // Denormalized game data
+  home_team?: string;
+  away_team?: string;
+  start_time?: string;
+  result?: string;
+  home_score?: number;
+  away_score?: number;
+  total_points?: number;
+  point_spread?: number;
+  is_final?: boolean;
+  // Fallback to betting_option relationship
+  betting_option?: {
     id: number;
     outcome_name: string;
     outcome_point: number | null;
@@ -47,8 +67,10 @@ interface BetSummary {
     american_odds: number;
     decimal_odds: number;
     market_type: string;
+    player_name: string;
   };
-  game: {
+  // Fallback to game relationship
+  game?: {
     id: string;
     home_team: string;
     away_team: string;
@@ -245,21 +267,19 @@ export function ComprehensiveMatchups({
 
   const formatBetDescription = (bet: BetSummary) => {
     if (bet.is_parlay) {
-      return `Parlay: ${bet.betting_option.outcome_name}`;
+      return `Parlay: ${bet.outcome_name || bet.betting_option?.outcome_name}`;
     }
     
-    const { betting_option } = bet;
-    const marketType = getMarketDisplayName(betting_option.market_type);
+    const marketType = getMarketDisplayName(bet.market_type || bet.betting_option?.market_type || '');
+    const outcomeName = bet.outcome_name || bet.betting_option?.outcome_name;
+    const outcomePoint = bet.outcome_point || bet.betting_option?.outcome_point;
+    const playerName = bet.player_name || bet.betting_option?.player_name;
     
-    if (betting_option.market_type === 'totals') {
-      return `${marketType}: ${betting_option.outcome_name} ${betting_option.outcome_point || ''}`;
-    } else if (betting_option.market_type === 'spreads') {
-      return `${marketType}: ${betting_option.outcome_name} ${betting_option.outcome_point || ''}`;
-    } else if (betting_option.market_type === 'team_totals') {
-      return `${marketType}: ${betting_option.outcome_name} ${betting_option.outcome_point || ''}`;
-    } else {
-      return `${marketType}: ${betting_option.outcome_name}`;
+    if (playerName) {
+      return `${marketType}: ${playerName} ${outcomeName} ${outcomePoint || ''}`;
     }
+    
+    return `${marketType}: ${outcomeName} ${outcomePoint || ''}`;
   };
 
   const getParlayLegDisplayName = (leg: any) => {
@@ -269,8 +289,10 @@ export function ComprehensiveMatchups({
       return `${leg.outcome_name} ${leg.outcome_point && leg.outcome_point > 0 ? '+' : ''}${leg.outcome_point}`;
     } else if (leg.market_type === 'team_totals') {
       return `${leg.outcome_name} ${leg.outcome_point}`;
+    } else if (leg.market_type === 'h2h') {
+      return `${leg.outcome_name}`;
     }
-    return leg.outcome_name;
+    return `${leg.market_type}: ${leg.player_name} ${leg.outcome_name} ${leg.outcome_point || ''}`
   };
 
   const getParlayLegStatusIcon = (leg: any) => {
@@ -355,30 +377,30 @@ export function ComprehensiveMatchups({
                               {getBetStatusIcon(bet.status)}
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-sm truncate text-blue-100">
-                                  {bet.is_parlay ? 'Parlay Bet' : `${bet.game.away_team} @ ${bet.game.home_team}`}
+                                  {bet.is_parlay ? 'Parlay Bet' : `${bet.away_team || bet.game?.away_team} @ ${bet.home_team || bet.game?.home_team}`}
                                 </div>
                                 <div className="text-xs text-blue-300 truncate">
                                   {formatBetDescription(bet)}
                                 </div>
                                 <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {getCompactGameDateTime(bet.game.start_time, user?.timezone || 'America/New_York')}
+                                  {getCompactGameDateTime(bet.start_time || bet.game?.start_time, user?.timezone || 'America/New_York')}
                                 </div>
                                 {bet.is_parlay && bet.parlay_legs && (
                                   <div className="space-y-2 mt-2">
                                     {bet.parlay_legs.map((leg: any, index: number) => (
                                       <div key={leg.id} className="text-sm bg-blue-800 p-2 rounded">
                                         <div className="font-medium text-blue-200 flex items-center gap-2">
-                                          Leg {index + 1}: {leg.gameInfo?.away_team || 'Away'} @ {leg.gameInfo?.home_team || 'Home'}
+                                          Leg {index + 1}: {leg.away_team || 'Away'} @ {leg.home_team || 'Home'}
                                           {getParlayLegStatusIcon(leg)}
                                         </div>
                                         <div className="text-blue-300">
                                           {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker || 'Multiple'}
                                         </div>
-                                        {leg.gameInfo?.start_time && (
+                                        {leg.start_time && (
                                           <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
                                             <Clock className="h-3 w-3" />
-                                            {getCompactGameDateTime(leg.gameInfo.start_time, user?.timezone || 'America/New_York')}
+                                            {getCompactGameDateTime(leg.start_time, user?.timezone || 'America/New_York')}
                                           </div>
                                         )}
                                       </div>
@@ -388,7 +410,7 @@ export function ComprehensiveMatchups({
                               </div>
                             </div>
                             <Badge variant="outline" className={`text-xs flex-shrink-0 ${bet.is_parlay ? 'border-blue-500 text-blue-200 bg-blue-800' : ''}`}>
-                              {bet.betting_option.bookmaker}
+                              {bet.bookmaker || bet.betting_option?.bookmaker}
                             </Badge>
                           </div>
                           <div className="flex justify-between items-center text-xs">
@@ -399,7 +421,7 @@ export function ComprehensiveMatchups({
                               </div>
                               <div>
                                 <span className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Odds:</span>
-                                <span className={`font-medium ml-1 ${bet.is_parlay ? "text-blue-100" : ""}`}>{formatAmericanOdds(bet.betting_option.american_odds)}</span>
+                                <span className={`font-medium ml-1 ${bet.is_parlay ? "text-blue-100" : ""}`}>{formatAmericanOdds(bet.odds_snapshot_american || bet.betting_option?.american_odds)}</span>
                               </div>
                             </div>
                             <div className="text-right">
@@ -443,30 +465,30 @@ export function ComprehensiveMatchups({
                               {getBetStatusIcon(bet.status)}
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-sm truncate text-blue-100">
-                                  {bet.is_parlay ? 'Parlay Bet' : `${bet.game.away_team} @ ${bet.game.home_team}`}
+                                  {bet.is_parlay ? 'Parlay Bet' : `${bet.away_team || bet.game?.away_team} @ ${bet.home_team || bet.game?.home_team}`}
                                 </div>
                                 <div className="text-xs text-blue-300 truncate">
                                   {formatBetDescription(bet)}
                                 </div>
                                 <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {getCompactGameDateTime(bet.game.start_time, user?.timezone || 'America/New_York')}
+                                  {getCompactGameDateTime(bet.start_time || bet.game?.start_time, user?.timezone || 'America/New_York')}
                                 </div>
                                 {bet.is_parlay && bet.parlay_legs && (
                                   <div className="space-y-2 mt-2">
                                     {bet.parlay_legs.map((leg: any, index: number) => (
                                       <div key={leg.id} className="text-sm bg-blue-800 p-2 rounded">
                                         <div className="font-medium text-blue-200 flex items-center gap-2">
-                                          Leg {index + 1}: {leg.gameInfo?.away_team || 'Away'} @ {leg.gameInfo?.home_team || 'Home'}
+                                          Leg {index + 1}: {leg.away_team || 'Away'} @ {leg.home_team || 'Home'}
                                           {getParlayLegStatusIcon(leg)}
                                         </div>
                                         <div className="text-blue-300">
                                           {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker || 'Multiple'}
                                         </div>
-                                        {leg.gameInfo?.start_time && (
+                                        {leg.start_time && (
                                           <div className="text-xs text-blue-400 mt-1 flex items-center gap-1">
                                             <Clock className="h-3 w-3" />
-                                            {getCompactGameDateTime(leg.gameInfo.start_time, user?.timezone || 'America/New_York')}
+                                            {getCompactGameDateTime(leg.start_time, user?.timezone || 'America/New_York')}
                                           </div>
                                         )}
                                       </div>
@@ -476,7 +498,7 @@ export function ComprehensiveMatchups({
                               </div>
                             </div>
                             <Badge variant="outline" className={`text-xs flex-shrink-0 ${bet.is_parlay ? 'border-blue-500 text-blue-200 bg-blue-800' : ''}`}>
-                              {bet.betting_option.bookmaker}
+                              {bet.bookmaker || bet.betting_option?.bookmaker}
                             </Badge>
                           </div>
                           <div className="flex justify-between items-center text-xs">
@@ -487,7 +509,7 @@ export function ComprehensiveMatchups({
                               </div>
                               <div>
                                 <span className={bet.is_parlay ? "text-blue-300" : "text-muted-foreground"}>Odds:</span>
-                                <span className={`font-medium ml-1 ${bet.is_parlay ? "text-blue-100" : ""}`}>{formatAmericanOdds(bet.betting_option.american_odds)}</span>
+                                <span className={`font-medium ml-1 ${bet.is_parlay ? "text-blue-100" : ""}`}>{formatAmericanOdds(bet.odds_snapshot_american || bet.betting_option?.american_odds)}</span>
                               </div>
                             </div>
                             <div className="text-right">

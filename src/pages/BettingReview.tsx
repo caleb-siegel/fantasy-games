@@ -24,16 +24,15 @@ interface BettingOption {
   decimal_odds: number;
   is_locked?: boolean;
   locked_at?: string;
+  player_name?: string; // For player props
+  home_team: string;
+  away_team: string;
+  start_time: string;
 }
 
 interface BetslipBet {
   bettingOption: BettingOption;
   amount: number;
-  gameInfo: {
-    home_team: string;
-    away_team: string;
-    start_time: string;
-  };
 }
 
 interface ParlayBettingOption {
@@ -47,11 +46,10 @@ interface ParlayBettingOption {
   decimal_odds: number;
   is_locked?: boolean;
   locked_at?: string;
-  gameInfo: {
-    home_team: string;
-    away_team: string;
-    start_time: string;
-  };
+  player_name?: string; // For player props
+  home_team: string;
+  away_team: string;
+  start_time: string;
 }
 
 interface BettingReviewProps {
@@ -209,6 +207,23 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
 
   const getOutcomeDisplayName = (bet: BetslipBet) => {
     const { bettingOption } = bet;
+    
+    // Handle player prop bets
+    if (bettingOption.market_type.startsWith('player_')) {
+      // For player props, we need to get the player name from the betting option
+      // The outcome_name should contain "Over" or "Under" and outcome_point is the line
+      const playerName = bettingOption.player_name || 'Player'; // Fallback if player_name not available
+      const outcome = bettingOption.outcome_name; // "Over" or "Under"
+      const line = bettingOption.outcome_point;
+      
+      if (line !== null && line !== undefined) {
+        return `${bettingOption.market_type} - ${playerName} ${outcome} ${line}`;
+      } else {
+        return `${bettingOption.market_type} - ${playerName} ${outcome}`;
+      }
+    }
+    
+    // Handle other bet types
     if (bettingOption.market_type === 'totals') {
       return `${bettingOption.outcome_name} ${bettingOption.outcome_point}`;
     } else if (bettingOption.market_type === 'spreads') {
@@ -220,6 +235,20 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   };
 
   const getParlayLegDisplayName = (leg: ParlayBettingOption) => {
+    // Handle player prop bets
+    if (leg.market_type.startsWith('player_')) {
+      const playerName = leg.player_name || 'Player'; // Fallback if player_name not available
+      const outcome = leg.outcome_name; // "Over" or "Under"
+      const line = leg.outcome_point;
+      
+      if (line !== null && line !== undefined) {
+        return `${playerName} ${outcome} ${line}`;
+      } else {
+        return `${playerName} ${outcome}`;
+      }
+    }
+    
+    // Handle other bet types
     if (leg.market_type === 'totals') {
       return `${leg.outcome_name} ${leg.outcome_point}`;
     } else if (leg.market_type === 'spreads') {
@@ -301,7 +330,6 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       if (parlayBets.length >= 1 && parlayStake > 0) {
         await apiService.placeParlayBet({
           matchupId: matchupId,
-          week: week,
           amount: parlayStake,
           bettingOptionIds: parlayBets.map(leg => leg.id)
         });
@@ -444,7 +472,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
                         {parlayBets.map((leg, index) => (
                           <div key={leg.id} className="text-sm bg-blue-800 p-2 rounded">
                             <div className="font-medium text-blue-200">
-                              Leg {index + 1}: {leg.gameInfo.away_team} @ {leg.gameInfo.home_team}
+                              Leg {index + 1}: {leg.away_team} @ {leg.home_team}
                             </div>
                             <div className="text-blue-300">
                               {getParlayLegDisplayName(leg)} • {formatAmericanOdds(leg.american_odds)} • {leg.bookmaker}
@@ -500,7 +528,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg text-white">
-                        {bet.gameInfo.away_team} @ {bet.gameInfo.home_team}
+                        {bet.bettingOption.away_team} @ {bet.bettingOption.home_team}
                       </CardTitle>
                       <div className="text-sm text-gray-400 mt-1">
                         {getOutcomeDisplayName(bet)} • {getMarketDisplayName(bet.bettingOption.market_type)}
@@ -510,7 +538,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
                       </div>
                       <div className="text-sm text-gray-500 mt-1">
                         <Clock className="h-3 w-3 inline mr-1" />
-                        {formatGameTime(bet.gameInfo.start_time)}
+                        {formatGameTime(bet.bettingOption.start_time)}
                       </div>
                     </div>
                     <Button
@@ -652,11 +680,11 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
               
               {/* Regular Bets Summary */}
               {betslipBets.map((bet, index) => (
-                <div key={index} className="text-sm bg-gray-100 p-2 rounded">
-                  <div className="font-medium">
-                    {bet.gameInfo.away_team} @ {bet.gameInfo.home_team}
+                <div key={index} className="text-sm bg-gray-200 p-3 rounded border">
+                  <div className="font-semibold text-gray-800">
+                    {bet.bettingOption.away_team} @ {bet.bettingOption.home_team}
                   </div>
-                  <div className="text-gray-600">
+                  <div className="text-gray-700 mt-1">
                     {getOutcomeDisplayName(bet)} • ${bet.amount} • {formatOdds(bet.bettingOption.american_odds)}
                   </div>
                 </div>

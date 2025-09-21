@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { X, ShoppingCart, DollarSign, TrendingUp } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface BettingOption {
-  id: number;
+interface DenormalizedBet {
+  id?: number;
   game_id: string;
   market_type: string;
   outcome_name: string;
@@ -15,16 +15,15 @@ interface BettingOption {
   bookmaker: string;
   american_odds: number;
   decimal_odds: number;
+  player_name?: string;
+  home_team: string;
+  away_team: string;
+  start_time: string;
 }
 
 interface BetslipBet {
-  bettingOption: BettingOption;
+  bettingOption: DenormalizedBet;
   amount: number;
-  gameInfo: {
-    home_team: string;
-    away_team: string;
-    start_time: string;
-  };
 }
 
 interface BetslipProps {
@@ -52,10 +51,12 @@ export const Betslip: React.FC<BetslipProps> = ({
 
   // Helper function to check if a bet is locked (game has started)
   const isBetLocked = (bet: BetslipBet) => {
-    const gameStartTime = new Date(bet.gameInfo.start_time);
+    const gameStartTime = new Date(bet.bettingOption.start_time);
     const now = new Date();
     return now >= gameStartTime;
   };
+
+  console.log(`bets: ${JSON.stringify(bets)}`);
 
   const getMarketDisplayName = (marketType: string) => {
     switch (marketType) {
@@ -69,6 +70,28 @@ export const Betslip: React.FC<BetslipProps> = ({
 
   const getOutcomeDisplayName = (bet: BetslipBet) => {
     const { bettingOption } = bet;
+    
+    // Safety check
+    if (!bettingOption) {
+      console.warn('bettingOption is undefined for bet:', bet);
+      return 'Unknown Bet';
+    }
+    
+    console.log(`bettingOption: ${JSON.stringify(bettingOption)}`);
+    // Handle player prop bets
+    if (bettingOption.market_type.startsWith('player_')) {
+      const playerName = bettingOption.player_name || 'Player'; // Fallback if player_name not available
+      const outcome = bettingOption.outcome_name; // "Over" or "Under"
+      const line = bettingOption.outcome_point;
+      
+      if (line !== null && line !== undefined) {
+        return `${playerName} ${outcome} ${line}`;
+      } else {
+        return `${playerName} ${outcome}`;
+      }
+    }
+    
+    // Handle other bet types
     if (bettingOption.market_type === 'totals') {
       return `${bettingOption.outcome_name} ${bettingOption.outcome_point}`;
     } else if (bettingOption.market_type === 'spreads') {
@@ -107,20 +130,27 @@ export const Betslip: React.FC<BetslipProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {bets.map((bet, index) => (
-                <div key={index} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-white text-sm truncate">
-                        {bet.gameInfo.away_team} @ {bet.gameInfo.home_team}
+              {bets.map((bet, index) => {
+                // Safety check for denormalized data
+                if (!bet.bettingOption) {
+                  console.warn('Bet missing bettingOption:', bet);
+                  return null;
+                }
+                
+                return (
+                  <div key={index} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-white text-sm truncate">
+                          {bet.bettingOption.away_team} @ {bet.bettingOption.home_team}
+                        </div>
+                        <div className="text-xs text-gray-400 truncate">
+                          {getOutcomeDisplayName(bet)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {bet.bettingOption.bookmaker} • {formatOdds(bet.bettingOption.american_odds)}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-400 truncate">
-                        {getOutcomeDisplayName(bet)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {bet.bettingOption.bookmaker} • {formatOdds(bet.bettingOption.american_odds)}
-                      </div>
-                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -159,7 +189,8 @@ export const Betslip: React.FC<BetslipProps> = ({
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -222,13 +253,19 @@ export const Betslip: React.FC<BetslipProps> = ({
               ) : (
                 <div className="flex gap-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pb-2">
                   {bets.map((bet, index) => {
+                    // Safety check for denormalized data
+                    if (!bet.bettingOption) {
+                      console.warn('Bet missing bettingOption:', bet);
+                      return null;
+                    }
+                    
                     const locked = isBetLocked(bet);
                     return (
                       <div key={index} className={`bg-gray-800 border ${locked ? 'border-red-500' : 'border-gray-700'} rounded-lg p-3 min-w-64 flex-shrink-0`}>
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-white text-sm truncate">
-                              {bet.gameInfo.away_team} @ {bet.gameInfo.home_team}
+                              {bet.bettingOption.away_team} @ {bet.bettingOption.home_team}
                             </div>
                             <div className="text-xs text-gray-400 truncate">
                               {getOutcomeDisplayName(bet)}
