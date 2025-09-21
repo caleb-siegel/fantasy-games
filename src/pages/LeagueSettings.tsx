@@ -231,11 +231,11 @@ export default function LeagueSettings() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Regular Season</span>
-                      <Badge variant="outline">Weeks 1-18</Badge>
+                      <Badge variant="outline">Weeks 1-14</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Playoffs</span>
-                      <Badge variant="outline">Weeks 19-22</Badge>
+                      <Badge variant="outline">Weeks 15-17</Badge>
                     </div>
                     <div className="pt-2 border-t">
                       <p className="text-xs text-muted-foreground mb-3">
@@ -347,11 +347,64 @@ export default function LeagueSettings() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Member list coming soon</p>
-                  <p className="text-sm mt-2">Detailed member information will be displayed here</p>
-                </div>
+                {league.members && league.members.length > 0 ? (
+                  <div className="space-y-3">
+                    {league.members
+                      .sort((a, b) => {
+                        // Sort by win percentage (descending), then by wins (descending)
+                        const aWinPct = a.wins + a.losses > 0 ? a.wins / (a.wins + a.losses) : 0;
+                        const bWinPct = b.wins + b.losses > 0 ? b.wins / (b.wins + b.losses) : 0;
+                        if (aWinPct !== bWinPct) return bWinPct - aWinPct;
+                        return b.wins - a.wins;
+                      })
+                      .map((member, index) => {
+                        const winPercentage = member.wins + member.losses > 0 
+                          ? ((member.wins / (member.wins + member.losses)) * 100).toFixed(1)
+                          : '0.0';
+                        const isCommissioner = member.id === league.commissioner_id;
+                        
+                        return (
+                          <div 
+                            key={member.id} 
+                            className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-medium">{member.username}</span>
+                                  {isCommissioner && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Commissioner
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {member.wins}W - {member.losses}L
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-semibold">
+                                {winPercentage}%
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Win Rate
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No members found</p>
+                    <p className="text-sm mt-2">Members will appear here once they join the league</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
