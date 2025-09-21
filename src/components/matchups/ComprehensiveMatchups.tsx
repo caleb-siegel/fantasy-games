@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, Calendar, Clock, Trophy, Target, Eye, RefreshCw, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { formatGameDateTime, getCompactGameDateTime } from '@/utils/dateUtils';
@@ -107,6 +109,10 @@ export function ComprehensiveMatchups({
   onWeekChange 
 }: ComprehensiveMatchupsProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  // Local state for the selected week to view (starts with system current week)
+  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
 
   // Helper function to check if a bet should be visible
   const shouldShowBet = (bet: BetSummary, betOwnerId: number) => {
@@ -157,9 +163,14 @@ export function ComprehensiveMatchups({
   const [validatingBets, setValidatingBets] = useState(false);
   const [validationStatus, setValidationStatus] = useState<{type: 'success' | 'error' | null, message: string}>({type: null, message: ''});
 
+  // Sync selectedWeek with currentWeek when system current week changes
+  useEffect(() => {
+    setSelectedWeek(currentWeek);
+  }, [currentWeek]);
+
   useEffect(() => {
     loadMatchupData();
-  }, [leagueId, currentWeek]);
+  }, [leagueId, selectedWeek]);
 
   const handleManualBetValidation = async () => {
     try {
@@ -197,8 +208,8 @@ export function ComprehensiveMatchups({
     try {
       setLoading(true);
       
-      // Load all matchups for the current week
-      const currentWeekResponse = await apiService.getWeekMatchups(leagueId, currentWeek);
+      // Load all matchups for the selected week
+      const currentWeekResponse = await apiService.getWeekMatchups(leagueId, selectedWeek);
       setCurrentWeekMatchups((currentWeekResponse as any).matchups);
       
       // Load all matchups for calendar view
@@ -213,10 +224,15 @@ export function ComprehensiveMatchups({
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
-    const newWeek = direction === 'prev' ? currentWeek - 1 : currentWeek + 1;
+    const newWeek = direction === 'prev' ? selectedWeek - 1 : selectedWeek + 1;
     if (newWeek >= 1 && newWeek <= 17) {
-      onWeekChange(newWeek);
+      setSelectedWeek(newWeek);
     }
+  };
+
+  const handleWeekCardClick = (week: number) => {
+    setSelectedWeek(week);
+    setActiveView('week');
   };
 
   const getMatchupStatus = (matchup: MatchupDetail) => {
@@ -371,7 +387,7 @@ export function ComprehensiveMatchups({
     if (currentWeekMatchups.length === 0) {
       return (
         <div className="text-center py-8">
-          <p className="text-muted-foreground">No matchups found for Week {currentWeek}</p>
+          <p className="text-muted-foreground">No matchups found for Week {selectedWeek}</p>
         </div>
       );
     }
@@ -644,31 +660,67 @@ export function ComprehensiveMatchups({
         {Array.from({ length: 17 }, (_, i) => i + 1).map((week) => {
           const weekMatchups = allMatchups.filter(m => m.week === week);
           return (
-            <Card key={week} className="cursor-pointer hover:shadow-md transition-shadow">
+            <Card key={week} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleWeekCardClick(week)}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base lg:text-lg">Week {week}</CardTitle>
               </CardHeader>
               <CardContent>
                 {weekMatchups.length > 0 ? (
                   <div className="space-y-2">
-                    {weekMatchups.map((matchup) => (
-                      <div key={matchup.id} className="text-xs lg:text-sm">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 min-w-0 flex-1">
-                            <span className="truncate text-xs lg:text-sm">
-                              {matchup.user1_username}
-                            </span>
-                            <span className="text-muted-foreground text-xs">vs</span>
-                            <span className="truncate text-xs lg:text-sm">
-                              {matchup.user2_username}
-                            </span>
+                    {weekMatchups.map((matchup) => {
+                      const isCompleted = !!matchup.winner_id;
+                      
+                      // Calculate actual payouts by summing actual_payout from all bets
+                      const user1ActualPayout = matchup.user1_bets.reduce((sum, bet) => {
+                        return sum + (bet.actual_payout || 0);
+                      }, 0);
+                      
+                      const user2ActualPayout = matchup.user2_bets.reduce((sum, bet) => {
+                        return sum + (bet.actual_payout || 0);
+                      }, 0);
+                      
+                      // Determine winner and loser based on actual payouts
+                      const user1Won = user1ActualPayout > user2ActualPayout;
+                      const user2Won = user2ActualPayout > user1ActualPayout;
+                      const isTie = user1ActualPayout === user2ActualPayout && user1ActualPayout > 0;
+                      
+                      return (
+                        <div key={matchup.id} className="text-xs lg:text-sm">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 min-w-0 flex-1">
+                              <span className="truncate text-xs lg:text-sm">
+                                {matchup.user1_username}
+                                {isCompleted && (
+                                  <span className={`font-medium ml-1 ${
+                                    user1Won ? 'text-green-600' : 
+                                    user2Won ? 'text-red-600' : 
+                                    isTie ? 'text-blue-600' : 'text-gray-600'
+                                  }`}>
+                                    ${user1ActualPayout.toFixed(2)}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-muted-foreground text-xs">vs</span>
+                              <span className="truncate text-xs lg:text-sm">
+                                {matchup.user2_username}
+                                {isCompleted && (
+                                  <span className={`font-medium ml-1 ${
+                                    user2Won ? 'text-green-600' : 
+                                    user1Won ? 'text-red-600' : 
+                                    isTie ? 'text-blue-600' : 'text-gray-600'
+                                  }`}>
+                                    ${user2ActualPayout.toFixed(2)}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                            {/* {matchup.winner_id && (
+                              <Trophy className="h-3 w-3 lg:h-4 lg:w-4 text-green-500 flex-shrink-0" />
+                            )} */}
                           </div>
-                          {matchup.winner_id && (
-                            <Trophy className="h-3 w-3 lg:h-4 lg:w-4 text-green-500 flex-shrink-0" />
-                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-xs lg:text-sm text-muted-foreground text-center py-2">
@@ -707,18 +759,29 @@ export function ComprehensiveMatchups({
               variant="outline"
               size="sm"
               onClick={() => navigateWeek('prev')}
-              disabled={currentWeek <= 1}
+              disabled={selectedWeek <= 1}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="px-3 py-1 bg-muted rounded text-sm font-medium">
-              Week {currentWeek}
-            </span>
+            
+            <Select value={selectedWeek.toString()} onValueChange={(value) => setSelectedWeek(parseInt(value))}>
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 17 }, (_, i) => i + 1).map((week) => (
+                  <SelectItem key={week} value={week.toString()}>
+                    Week {week}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigateWeek('next')}
-              disabled={currentWeek >= 17}
+              disabled={selectedWeek >= 17}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

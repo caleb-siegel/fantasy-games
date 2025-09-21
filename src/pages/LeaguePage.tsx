@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronLeft, ChevronRight, Users, Trophy, Calendar, Settings, Target, BarChart3, RefreshCw } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
-import { useCurrentWeek } from '@/hooks/useWeekManagement';
+import { useCurrentWeek, useWeekManagement } from '@/hooks/useWeekManagement';
 import { useLeagueMembership } from '@/hooks/useLeagueMembership';
 import { BettingInterface } from '@/components/betting/BettingInterface';
 import { ComprehensiveStandings } from '@/components/standings/ComprehensiveStandings';
@@ -58,6 +58,7 @@ export default function LeaguePage() {
   const { user } = useAuth();
   const { currentWeek, refreshWeek } = useCurrentWeek();
   const { refreshLeagues } = useLeagueMembership();
+  const { setCurrentWeek } = useWeekManagement();
   
   const [league, setLeague] = useState<League | null>(null);
   const [currentMatchup, setCurrentMatchup] = useState<Matchup | null>(null);
@@ -134,7 +135,7 @@ export default function LeaguePage() {
   const handleRefreshOdds = async () => {
     try {
       setRefreshing(true);
-      await apiService.forceUpdateOdds(selectedWeek);
+      await apiService.forceUpdateOdds(currentWeek);
       toast.success('Odds refreshed successfully');
     } catch (error) {
       console.error('Failed to refresh odds:', error);
@@ -409,7 +410,10 @@ export default function LeaguePage() {
               <ComprehensiveMatchups 
                 leagueId={league.id}
                 currentWeek={currentWeek}
-                onWeekChange={(week) => {}} // No-op since we removed week navigation
+                onWeekChange={(week) => {
+                  // This should just change the view, not the system current week
+                  // The ComprehensiveMatchups component should handle this internally
+                }}
               />
             ) : (
               <Card>
