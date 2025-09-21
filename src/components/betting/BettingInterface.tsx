@@ -154,7 +154,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
 
       const optionsResponse = await apiService.getWeeklyBettingOptions(week);
       setGames(optionsResponse.games);
-      console.log('🔍 Games:', optionsResponse.games);
       setAvailableMarketTypes(optionsResponse.market_types || []);
 
       // Initialize selected market types for each game

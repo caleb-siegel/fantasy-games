@@ -102,6 +102,30 @@ export function ComprehensiveMatchups({
   onWeekChange 
 }: ComprehensiveMatchupsProps) {
   const { user } = useAuth();
+
+  // Helper function to check if a bet should be visible
+  const shouldShowBet = (bet: BetSummary, betOwnerId: number) => {
+    // Always show your own bets
+    if (user?.id === betOwnerId) {
+      return true;
+    }
+    
+    // For other users' bets, only show if the game has started
+    const gameStartTime = bet.start_time || bet.game?.start_time;
+    if (!gameStartTime) {
+      return false; // Hide if no start time available
+    }
+    
+    const now = new Date();
+    const startTime = new Date(gameStartTime);
+    
+    return now >= startTime;
+  };
+
+  // Helper function to filter bets based on visibility rules
+  const getVisibleBets = (bets: BetSummary[], betOwnerId: number) => {
+    return bets.filter(bet => shouldShowBet(bet, betOwnerId));
+  };
   const [currentWeekMatchups, setCurrentWeekMatchups] = useState<MatchupDetail[]>([]);
   const [allMatchups, setAllMatchups] = useState<MatchupDetail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -369,8 +393,8 @@ export function ComprehensiveMatchups({
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {matchup.user1_bets.length > 0 ? (
-                      matchup.user1_bets.map((bet) => (
+                    {getVisibleBets(matchup.user1_bets, matchup.user1_id).length > 0 ? (
+                      getVisibleBets(matchup.user1_bets, matchup.user1_id).map((bet) => (
                         <div key={bet.id} className={`p-3 rounded-lg border ${bet.is_parlay ? 'bg-blue-900 border-blue-700' : 'bg-muted/50'}`}>
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -437,7 +461,7 @@ export function ComprehensiveMatchups({
                       ))
                     ) : (
                       <div className="p-3 text-center text-muted-foreground text-sm">
-                        No bets placed yet
+                        {matchup.user1_bets.length > 0 ? 'Bets hidden until games start' : 'No bets placed yet'}
                       </div>
                     )}
                   </div>
@@ -457,8 +481,8 @@ export function ComprehensiveMatchups({
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {matchup.user2_bets.length > 0 ? (
-                      matchup.user2_bets.map((bet) => (
+                    {getVisibleBets(matchup.user2_bets, matchup.user2_id).length > 0 ? (
+                      getVisibleBets(matchup.user2_bets, matchup.user2_id).map((bet) => (
                         <div key={bet.id} className={`p-3 rounded-lg border ${bet.is_parlay ? 'bg-blue-900 border-blue-700' : 'bg-muted/50'}`}>
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -525,7 +549,7 @@ export function ComprehensiveMatchups({
                       ))
                     ) : (
                       <div className="p-3 text-center text-muted-foreground text-sm">
-                        No bets placed yet
+                        {matchup.user2_bets.length > 0 ? 'Bets hidden until games start' : 'No bets placed yet'}
                       </div>
                     )}
                   </div>
