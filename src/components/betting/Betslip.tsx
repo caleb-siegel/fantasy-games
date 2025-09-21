@@ -56,8 +56,6 @@ export const Betslip: React.FC<BetslipProps> = ({
     return now >= gameStartTime;
   };
 
-  console.log(`bets: ${JSON.stringify(bets)}`);
-
   const getMarketDisplayName = (marketType: string) => {
     switch (marketType) {
       case 'h2h': return 'Moneyline';
@@ -91,7 +89,6 @@ export const Betslip: React.FC<BetslipProps> = ({
       return 'Unknown Bet';
     }
     
-    console.log(`bettingOption: ${JSON.stringify(bettingOption)}`);
     // Handle player prop bets
     if (bettingOption.market_type.startsWith('player_')) {
       const playerName = bettingOption.player_name || 'Player'; // Fallback if player_name not available

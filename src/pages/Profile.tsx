@@ -70,16 +70,11 @@ export default function Profile() {
             const betsResponse = await apiService.getUserBets(week)
             const weekData = betsResponse || {}
             
-            // Debug logging for each week
-            console.log(`🔍 Week ${week} - Regular bets:`, weekData.bets?.length || 0)
-            console.log(`🔍 Week ${week} - Parlay bets:`, weekData.parlay_bets?.length || 0)
-            console.log(`🔍 Week ${week} - Total wagered:`, weekData.total_bet_amount || 0)
             
             // If this week has any betting activity, use it
             if ((weekData.bets?.length > 0) || (weekData.parlay_bets?.length > 0)) {
               currentWeekData = weekData
               foundWeek = week
-              console.log(`✅ Found betting activity in Week ${week}`)
               break
             }
           } catch (error) {
@@ -87,8 +82,6 @@ export default function Profile() {
           }
         }
         
-        console.log('🔍 Final Profile Debug - Using Week:', foundWeek)
-        console.log('🔍 Final data:', currentWeekData)
         
         // Calculate stats from real data
         const totalLeagues = leagues.length

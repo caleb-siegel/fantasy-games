@@ -150,8 +150,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
       setLoading(true);
       setError(null);
 
-      console.log(`🔄 Loading betting data for week ${week}, matchup ${matchupId}`);
-
       const optionsResponse = await apiService.getWeeklyBettingOptions(week);
       setGames(optionsResponse.games);
       setAvailableMarketTypes(optionsResponse.market_types || []);
@@ -167,7 +165,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
       setSelectedMarketTypes(initialMarketTypes);
 
       const betsResponse = await apiService.getUserBets(week); // Get bets for current week
-      console.log(`📊 Week ${week} bets:`, betsResponse.bets.length, 'bets, remaining balance:', betsResponse.remaining_balance);
       setUserBets(betsResponse.bets);
       setRemainingBalance(betsResponse.remaining_balance);
       setTotalBetAmount(betsResponse.total_bet_amount);
@@ -277,14 +274,12 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
   const getUserTimezone = () => {
     // Try to get user's timezone from their profile first
     if (user?.timezone) {
-      console.log('🌍 Using user profile timezone:', user.timezone);
       return user.timezone;
     }
     
     // Fallback to browser's detected timezone
     try {
       const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      console.log('🌍 Using browser detected timezone:', browserTimezone);
       return browserTimezone;
     } catch (error) {
       console.warn('Could not detect timezone, falling back to Eastern Time:', error);
@@ -301,7 +296,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
 
   const navigateToBettingReview = () => {
     // Store bets and parlay bets in sessionStorage to pass to the review page
-    console.log(`🔍 Storing week ${week} in sessionStorage`);
     sessionStorage.setItem('betslipBets', JSON.stringify(betslipBets));
     sessionStorage.setItem('parlayBets', JSON.stringify(parlayBets));
     sessionStorage.setItem('bettingWeek', week.toString());
@@ -386,7 +380,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
       setPlacingBet(true);
       setError(null);
 
-      console.log(`🎯 Placing bet: matchup ${matchupId}, option ${selectedBettingOption.id}, amount $${amount}`);
       
       await apiService.placeBet({
         matchupId: matchupId,
@@ -488,11 +481,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                   {(() => {
                     const userTimezone = getUserTimezone();
                     const formattedTime = getDetailedGameDateTime(gameWithOptions.game.start_time, userTimezone);
-                    console.log(`🕐 Game time for ${gameWithOptions.game.away_team} @ ${gameWithOptions.game.home_team}:`, {
-                      originalTime: gameWithOptions.game.start_time,
-                      userTimezone,
-                      formattedTime
-                    });
                     return formattedTime;
                   })()}
                 </div>
@@ -721,7 +709,6 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                         <div className="space-y-2">
                           {(() => {
                             // Filter outcomes for right section
-                            console.log('🔍 Player props - All outcomes (right):', Object.entries(outcomes));
                             const filteredOutcomes = Object.entries(outcomes).filter(([outcomeKey, outcome]) => {
                               const isRelevantOutcome = currentMarketType === 'totals' 
                                 ? outcome.outcome_name.toLowerCase().includes('over')

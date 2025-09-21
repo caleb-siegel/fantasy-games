@@ -82,13 +82,6 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   // Calculate parlay information
   const parlayCalculation = parlayBets.length >= 1 ? calculateParlayFromOptions(parlayStake, parlayBets) : null;
   
-  // Debug logging
-  console.log('🔍 BettingReview State:');
-  console.log('parlayBets:', parlayBets);
-  console.log('parlayBets.length:', parlayBets.length);
-  console.log('parlayStake:', parlayStake);
-  console.log('parlayCalculation:', parlayCalculation);
-  
   const totalBetAmount = betslipBets.reduce((sum, bet) => sum + bet.amount, 0) + parlayStake;
   const totalPotentialPayout = betslipBets.reduce((sum, bet) => sum + (bet.amount * bet.bettingOption.decimal_odds), 0) + (parlayCalculation?.return || 0);
   const totalProfit = totalPotentialPayout - totalBetAmount;
@@ -101,15 +94,9 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
     const storedParlayBets = sessionStorage.getItem('parlayBets');
     const storedWeek = sessionStorage.getItem('bettingWeek');
     
-    console.log('🔍 BettingReview Debug:');
-    console.log('Stored bets:', storedBets);
-    console.log('Stored parlay bets:', storedParlayBets);
-    console.log('Stored week:', storedWeek);
-    
     // Set week from sessionStorage if available
     if (storedWeek) {
       const weekValue = parseInt(storedWeek);
-      console.log(`🔍 Setting week from sessionStorage: ${storedWeek} -> ${weekValue}`);
       setWeek(weekValue);
     } else {
       console.log(`🔍 No week found in sessionStorage, using default: ${propWeek || 1}`);
@@ -118,7 +105,6 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
     if (storedBets) {
       try {
         const parsedBets = JSON.parse(storedBets);
-        console.log('✅ Parsed bets:', parsedBets);
         setBetslipBets(parsedBets);
       } catch (error) {
         console.error('❌ Failed to parse stored bets:', error);
@@ -129,7 +115,6 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
     if (storedParlayBets) {
       try {
         const parsedParlayBets = JSON.parse(storedParlayBets);
-        console.log('✅ Parsed parlay bets:', parsedParlayBets);
         setParlayBets(parsedParlayBets);
       } catch (error) {
         console.error('❌ Failed to parse stored parlay bets:', error);
@@ -179,10 +164,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
 
   const loadUserBets = async () => {
     try {
-      console.log(`🔍 loadUserBets called with week: ${week}`);
-      console.log(`🔍 API URL will be: /api/bets/user/${week}`);
       const betsResponse = await apiService.getUserBets(week);
-      console.log('🔍 API Response from getUserBets:', betsResponse);
       
       setUserBets(betsResponse.bets);
       setRemainingBalance(betsResponse.remaining_balance);
@@ -338,7 +320,6 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
           amount: betslipBet.amount
         }));
 
-        console.log(`🎯 Placing batch bets for week ${week}:`, batchBets);
         await apiService.placeBatchBets({ bets: batchBets, week });
       }
 

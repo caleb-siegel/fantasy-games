@@ -33,13 +33,11 @@ export default function Betting() {
       
       // Load user's leagues
       const leaguesResponse = await apiService.getUserLeagues();
-      console.log('Leagues response:', leaguesResponse); // Debug log
       setUserLeagues(leaguesResponse.leagues);
       
       // Select first league if available
       if (leaguesResponse.leagues.length > 0) {
         setSelectedLeague(leaguesResponse.leagues[0]);
-        console.log('Selected league:', leaguesResponse.leagues[0]); // Debug log
       }
       
     } catch (error) {

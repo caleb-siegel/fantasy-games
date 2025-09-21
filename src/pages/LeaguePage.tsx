@@ -112,9 +112,7 @@ export default function LeaguePage() {
     if (!league) return;
     
     try {
-      console.log(`🔄 Loading matchup for league ${league.id}, week ${currentWeek}`);
       const matchupResponse = await apiService.getUserMatchup(league.id, currentWeek);
-      console.log(`📋 Loaded matchup:`, matchupResponse.matchup);
       setCurrentMatchup(matchupResponse.matchup);
     } catch (error) {
       console.error('Failed to load matchup:', error);

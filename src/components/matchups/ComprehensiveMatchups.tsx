@@ -172,16 +172,13 @@ export function ComprehensiveMatchups({
   const loadMatchupData = async () => {
     try {
       setLoading(true);
-      console.log('Loading matchup data for league:', leagueId, 'week:', currentWeek);
       
       // Load all matchups for the current week
       const currentWeekResponse = await apiService.getWeekMatchups(leagueId, currentWeek);
-      console.log('Current week response:', currentWeekResponse);
       setCurrentWeekMatchups((currentWeekResponse as any).matchups);
       
       // Load all matchups for calendar view
       const allMatchupsResponse = await apiService.getAllMatchups(leagueId);
-      console.log('All matchups response:', allMatchupsResponse);
       setAllMatchups((allMatchupsResponse as any).matchups);
       
     } catch (error) {
@@ -350,7 +347,6 @@ export function ComprehensiveMatchups({
   };
 
   const renderWeekView = () => {
-    console.log('Rendering week view with matchups:', currentWeekMatchups);
     
     if (currentWeekMatchups.length === 0) {
       return (
