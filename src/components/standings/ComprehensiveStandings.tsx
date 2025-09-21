@@ -93,7 +93,7 @@ export function ComprehensiveStandings({ leagueId }: ComprehensiveStandingsProps
   const exportToCSV = () => {
     const headers = [
       'Rank', 'Player', 'Record', 'Win %', 'Money Earned', 'Avg/Week', 
-      'Money Against', 'Current Streak', 'Longest Win Streak', 'Bets Won', 'Bets Lost'
+      'Points Against', 'Current Streak', 'Longest Win Streak', 'Bets Won', 'Bets Lost'
     ];
     
     const csvData = sortedStandings.map(standing => [
@@ -103,7 +103,7 @@ export function ComprehensiveStandings({ leagueId }: ComprehensiveStandingsProps
       `${standing.win_percentage.toFixed(1)}%`,
       `$${standing.money_earned_total.toFixed(2)}`,
       `$${standing.avg_money_per_week.toFixed(2)}`,
-      `$${standing.money_against.toFixed(2)}`,
+      `$${standing.points_against.toFixed(2)}`,
       `${standing.current_streak} ${standing.win_streak_type}`,
       standing.longest_win_streak,
       standing.bets_won,
@@ -179,6 +179,7 @@ export function ComprehensiveStandings({ leagueId }: ComprehensiveStandingsProps
                 <SelectItem value="win_percentage">Win Percentage</SelectItem>
                 <SelectItem value="current_streak">Current Streak</SelectItem>
                 <SelectItem value="bets_won">Bets Won</SelectItem>
+                <SelectItem value="points_against">Money Against</SelectItem>
               </SelectContent>
             </Select>
             <Button onClick={exportToCSV} variant="outline" size="sm">
@@ -234,7 +235,7 @@ export function ComprehensiveStandings({ leagueId }: ComprehensiveStandingsProps
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer hover:bg-muted/50 hidden xl:table-cell"
-                  onClick={() => handleSort('money_against')}
+                  onClick={() => handleSort('points_against')}
                 >
                   Against
                 </TableHead>
@@ -300,7 +301,7 @@ export function ComprehensiveStandings({ leagueId }: ComprehensiveStandingsProps
                   </TableCell>
                   <TableCell className="hidden xl:table-cell">
                     <div className="text-sm text-red-600">
-                      ${standing.money_against.toFixed(2)}
+                      ${standing.points_against.toFixed(2)}
                     </div>
                   </TableCell>
                   <TableCell>
