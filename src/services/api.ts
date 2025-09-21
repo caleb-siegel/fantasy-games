@@ -103,7 +103,7 @@ class ApiService {
     });
   }
 
-  async joinLeague(data: { invite_code: string }) {
+  async joinLeague(data: { invite_code: string; team_name?: string }) {
     return this.request<{
       message: string;
       league: any;

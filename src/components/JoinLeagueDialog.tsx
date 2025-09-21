@@ -22,6 +22,7 @@ interface JoinLeagueDialogProps {
 
 export function JoinLeagueDialog({ open, onOpenChange, onLeagueJoined }: JoinLeagueDialogProps) {
   const [inviteCode, setInviteCode] = useState("")
+  const [teamName, setTeamName] = useState("")
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
@@ -46,7 +47,10 @@ export function JoinLeagueDialog({ open, onOpenChange, onLeagueJoined }: JoinLea
 
     try {
       setLoading(true)
-      const response = await apiService.joinLeague({ invite_code: inviteCode.trim().toUpperCase() })
+      const response = await apiService.joinLeague({ 
+        invite_code: inviteCode.trim().toUpperCase(),
+        team_name: teamName.trim() || undefined
+      })
       
       toast({
         title: "Success!",
@@ -54,6 +58,7 @@ export function JoinLeagueDialog({ open, onOpenChange, onLeagueJoined }: JoinLea
       })
 
       setInviteCode("")
+      setTeamName("")
       onOpenChange(false)
       onLeagueJoined()
     } catch (error) {
@@ -71,6 +76,7 @@ export function JoinLeagueDialog({ open, onOpenChange, onLeagueJoined }: JoinLea
   const handleClose = () => {
     if (!loading) {
       setInviteCode("")
+      setTeamName("")
       onOpenChange(false)
     }
   }
@@ -115,6 +121,27 @@ export function JoinLeagueDialog({ open, onOpenChange, onLeagueJoined }: JoinLea
               }}
             />
           </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="team-name" className="text-right">
+              Team Name
+            </Label>
+            <Input
+              id="team-name"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder="Enter your team name (optional)"
+              className="col-span-3"
+              disabled={loading}
+              maxLength={100}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !loading && inviteCode.length === 8) {
+                  handleJoinLeague()
+                }
+              }}
+            />
+          </div>
+          
           <div className="text-sm text-muted-foreground text-center">
             Enter the 8-character code provided by the league commissioner
           </div>
