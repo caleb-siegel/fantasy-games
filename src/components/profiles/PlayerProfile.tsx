@@ -134,7 +134,7 @@ export function PlayerProfile() {
         ...parlayStats,
         recent_weeks: filteredRecentWeeks
       };
-      
+      console.log(`Enhanced profile: ${JSON.stringify(enhancedProfile)}`);
       setProfile(enhancedProfile);
     } catch (error) {
       console.error('Failed to load player profile:', error);
@@ -315,7 +315,7 @@ export function PlayerProfile() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {profile.recent_weeks.length > 0 ? (
+                  {profile?.recent_weeks?.length > 0 ? (
                     profile.recent_weeks.map((week) => (
                     <div key={week.week} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">

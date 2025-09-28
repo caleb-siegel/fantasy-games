@@ -6,11 +6,12 @@ import { RefreshCw } from 'lucide-react';
 import { BettingInterface } from '@/components/betting/BettingInterface';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useCurrentWeek } from '@/hooks/useWeekManagement';
 import { toast } from 'sonner';
 
 export default function Betting() {
   const { user } = useAuth();
-  const [currentWeek, setCurrentWeek] = useState(1);
+  const { currentWeek } = useCurrentWeek();
   const [userLeagues, setUserLeagues] = useState<any[]>([]);
   const [selectedLeague, setSelectedLeague] = useState<any>(null);
   const [currentMatchup, setCurrentMatchup] = useState<any>(null);
@@ -22,7 +23,7 @@ export default function Betting() {
   }, []);
 
   useEffect(() => {
-    if (selectedLeague) {
+    if (selectedLeague && currentWeek) {
       loadMatchup();
     }
   }, [selectedLeague, currentWeek]);

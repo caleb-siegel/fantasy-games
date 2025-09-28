@@ -508,6 +508,12 @@ class ApiService {
     }>('/api/week/current');
   }
 
+  // Simple current week endpoint for quick access
+  async getCurrentWeekNumber() {
+    const result = await this.getCurrentWeek();
+    return result.current_week;
+  }
+
   async getWeekStatus(week?: number) {
     const url = week ? `/api/week/status?week=${week}` : '/api/week/status';
     return this.request<{

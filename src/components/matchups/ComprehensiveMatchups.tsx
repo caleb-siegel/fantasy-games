@@ -94,6 +94,7 @@ interface BetSummary {
     away_team?: string;
     home_team?: string;
     bookmaker?: string;
+    status?: 'won' | 'lost' | 'pending';
   }>;
 }
 
@@ -126,7 +127,7 @@ export function ComprehensiveMatchups({
       const now = new Date();
       
       // If any leg has lost, reveal the entire parlay
-      const hasLostLeg = bet.parlay_legs.some(leg => leg.result === 'lost');
+      const hasLostLeg = bet.parlay_legs.some(leg => leg.status === 'lost');
       if (hasLostLeg) {
         return true;
       }
@@ -173,7 +174,6 @@ export function ComprehensiveMatchups({
     try {
       setValidatingBets(true);
       setValidationStatus({type: null, message: ''});
-      
       const result = await apiService.runBetValidation() as any;
       
       if (result?.success) {
@@ -257,12 +257,12 @@ export function ComprehensiveMatchups({
 
   const getBetPayoutInfo = (bet: BetSummary) => {
     // If bet has been evaluated (has outcome), show final payout
-    if (bet.outcome && bet.outcome !== 'pending') {
+    if (bet.status && bet.status !== 'pending') {
       const finalPayout = bet.actual_payout || 0;
       return {
         label: 'Final',
         amount: finalPayout,
-        color: bet.outcome === 'won' ? 'text-green-600' : 'text-red-600'
+        color: bet.status === 'won' ? 'text-green-600' : 'text-red-600'
       };
     }
     
@@ -284,7 +284,9 @@ export function ComprehensiveMatchups({
     
     // Calculate max potential payout (all bets, but only potential for pending, actual for evaluated)
     const maxPotentialPayout = bets.reduce((sum, bet) => {
-      if (bet.outcome && bet.outcome !== 'pending') {
+      console.log(`Bet actual payout: ${bet.actual_payout || bet.potential_payout}`)
+      console.log(`sum: ${sum}`)
+      if (bet.status && bet.status !== 'pending') {
         return sum + (bet.actual_payout || 0);
       }
       return sum + bet.potential_payout;
@@ -292,7 +294,9 @@ export function ComprehensiveMatchups({
     
     // Calculate current payout (only actual winnings from completed bets)
     const currentPayout = visibleBets.reduce((sum, bet) => {
-      if (bet.outcome && bet.outcome !== 'pending') {
+      console.log(`Bet: ${JSON.stringify(bet)}`)
+      console.log(`Bet actual payout: ${bet.actual_payout}`)
+      if (bet.status && bet.status !== 'pending') {
         return sum + (bet.actual_payout || 0);
       }
       return sum; // Don't add potential payout for pending bets
@@ -368,11 +372,11 @@ export function ComprehensiveMatchups({
   };
 
   const getParlayLegStatusIcon = (leg: any) => {
-    if (leg.result === 'won') {
+    if (leg.status === 'won') {
       return <CheckCircle className="h-4 w-4 text-green-500" />;
-    } else if (leg.result === 'lost') {
+    } else if (leg.status === 'lost') {
       return <AlertCircle className="h-4 w-4 text-red-500" />;
-    } else if (leg.result === 'pending') {
+    } else if (leg.status === 'pending') {
       return <Clock className="h-4 w-4 text-yellow-500" />;
     }
     return <Clock className="h-4 w-4 text-gray-500" />;
@@ -432,7 +436,10 @@ export function ComprehensiveMatchups({
                     <h4 className="font-semibold text-sm lg:text-base">{matchup.user1_username}</h4>
                     <div className="text-right">
                       <div className="text-xs lg:text-sm text-muted-foreground">
-                        Bet: ${matchup.user1_total_bet}
+                        Current: ${(() => {
+                          const payoutInfo = getUserTotalPayoutInfo(matchup.user1_bets, matchup.user1_id);
+                          return payoutInfo.current.toFixed(2);
+                        })()}
                       </div>
                       {(() => {
                         const payoutInfo = getUserTotalPayoutInfo(matchup.user1_bets, matchup.user1_id);
@@ -441,7 +448,7 @@ export function ComprehensiveMatchups({
                             <div className="text-xs text-muted-foreground">
                               Initial: {payoutInfo.hasHiddenBets ? payoutInfo.hiddenInitialDisplay : `$${payoutInfo.initialPotential?.toFixed(2)}`} | 
                               Max: {payoutInfo.hasHiddenBets ? payoutInfo.hiddenMaxDisplay : `$${payoutInfo.maxPotential?.toFixed(2)}`} | 
-                              Current: ${payoutInfo.current.toFixed(2)}
+                              Bet: ${matchup.user1_total_bet}
                             </div>
                             {payoutInfo.hasHiddenBets && (
                               <div className="text-xs text-orange-600 italic">
@@ -534,7 +541,10 @@ export function ComprehensiveMatchups({
                     <h4 className="font-semibold text-sm lg:text-base">{matchup.user2_username}</h4>
                     <div className="text-right">
                       <div className="text-xs lg:text-sm text-muted-foreground">
-                        Bet: ${matchup.user2_total_bet}
+                        Current: ${(() => {
+                          const payoutInfo = getUserTotalPayoutInfo(matchup.user2_bets, matchup.user2_id);
+                          return payoutInfo.current.toFixed(2);
+                        })()}
                       </div>
                       {(() => {
                         const payoutInfo = getUserTotalPayoutInfo(matchup.user2_bets, matchup.user2_id);
@@ -543,7 +553,7 @@ export function ComprehensiveMatchups({
                             <div className="text-xs text-muted-foreground">
                               Initial: {payoutInfo.hasHiddenBets ? payoutInfo.hiddenInitialDisplay : `$${payoutInfo.initialPotential?.toFixed(2)}`} | 
                               Max: {payoutInfo.hasHiddenBets ? payoutInfo.hiddenMaxDisplay : `$${payoutInfo.maxPotential?.toFixed(2)}`} | 
-                              Current: ${payoutInfo.current.toFixed(2)}
+                              Bet: ${matchup.user2_total_bet}
                             </div>
                             {payoutInfo.hasHiddenBets && (
                               <div className="text-xs text-orange-600 italic">

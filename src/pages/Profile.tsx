@@ -114,7 +114,7 @@ export default function Profile() {
         const totalBetsFromWeek = (currentWeekData.bets?.length || 0) + (currentWeekData.parlay_bets?.length || 0)
         
         // Calculate pending bets from current week data (includes parlays)
-        const pendingRegularBets = currentWeekData.bets?.filter(bet => bet.outcome === null || bet.outcome === 'pending').length || 0
+        const pendingRegularBets = currentWeekData.bets?.filter(bet => bet.status === null || bet.status === 'pending').length || 0
         const pendingParlayBets = currentWeekData.parlay_bets?.filter(parlay => parlay.status === 'pending' || parlay.status === 'locked').length || 0
         const totalPendingBets = pendingRegularBets + pendingParlayBets
         
@@ -236,7 +236,7 @@ export default function Profile() {
         const totalBetsFromWeek = (currentWeekData.bets?.length || 0) + (currentWeekData.parlay_bets?.length || 0)
         
         // Calculate pending bets from current week data (includes parlays)
-        const pendingRegularBets = currentWeekData.bets?.filter(bet => bet.outcome === null || bet.outcome === 'pending').length || 0
+        const pendingRegularBets = currentWeekData.bets?.filter(bet => bet.status === null || bet.status === 'pending').length || 0
         const pendingParlayBets = currentWeekData.parlay_bets?.filter(parlay => parlay.status === 'pending' || parlay.status === 'locked').length || 0
         const totalPendingBets = pendingRegularBets + pendingParlayBets
         

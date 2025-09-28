@@ -84,7 +84,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   const [userBets, setUserBets] = useState<any[]>([]);
   const [remainingBalance, setRemainingBalance] = useState<number>(100);
   const [matchupId, setMatchupId] = useState<number>(propMatchupId || 0);
-  const [week, setWeek] = useState<number>(propWeek || currentWeek || 1);
+  const [week, setWeek] = useState<number>(propWeek || currentWeek);
 
   // Calculate parlay information
   const parlayCalculation = parlayBets.length >= 1 ? calculateParlayFromOptions(parlayStake, parlayBets) : null;
@@ -106,8 +106,8 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       const weekValue = parseInt(storedWeek);
       setWeek(weekValue);
     } else {
-      console.log(`🔍 No week found in sessionStorage, using current week: ${currentWeek || propWeek || 1}`);
-      setWeek(currentWeek || propWeek || 1);
+      console.log(`🔍 No week found in sessionStorage, using current week: ${currentWeek || propWeek}`);
+      setWeek(currentWeek || propWeek);
     }
     
     if (storedBets) {
