@@ -555,7 +555,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                               const isRelevantOutcome = currentMarketType === 'totals' 
                                 ? outcome.outcome_name.toLowerCase().includes('under')
                                 : currentMarketType === 'team_totals'
-                                  ? outcome.outcome_name === gameWithOptions.game.away_team
+                                  ? outcome.team_side === 'away'
                                   : currentMarketType.startsWith('player_')
                                     ? outcome.outcome_name.toLowerCase().includes('over') // Show over bets in left section
                                     : currentMarketType === 'h2h' 
@@ -704,7 +704,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                               const isRelevantOutcome = currentMarketType === 'totals' 
                                 ? outcome.outcome_name.toLowerCase().includes('over')
                                 : currentMarketType === 'team_totals'
-                                  ? outcome.outcome_name === gameWithOptions.game.home_team
+                                  ? outcome.team_side === 'home'
                                   : currentMarketType.startsWith('player_')
                                     ? outcome.outcome_name.toLowerCase().includes('under') // Show under bets in right section
                                     : currentMarketType === 'h2h' 
