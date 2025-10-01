@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, Users, Trophy, Calendar, Settings, Target, BarChart3, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Trophy, Calendar, Settings, Target, BarChart3, RefreshCw, AlertTriangle } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useCurrentWeek, useWeekManagement } from '@/hooks/useWeekManagement';
@@ -14,6 +14,7 @@ import { useLeagueMembership } from '@/hooks/useLeagueMembership';
 import { BettingInterface } from '@/components/betting/BettingInterface';
 import { ComprehensiveStandings } from '@/components/standings/ComprehensiveStandings';
 import { ComprehensiveMatchups } from '@/components/matchups/ComprehensiveMatchups';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 interface League {
@@ -66,6 +67,8 @@ export default function LeaguePage() {
   const [allMatchups, setAllMatchups] = useState<Matchup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showRolloverDialog, setShowRolloverDialog] = useState(false);
+  const [rollingOver, setRollingOver] = useState(false);
   
   // Get initial tab from URL parameters
   const initialTab = searchParams.get('tab') || 'overview';
@@ -145,6 +148,27 @@ export default function LeaguePage() {
     }
   };
 
+  const handleRolloverWeek = () => {
+    setShowRolloverDialog(true);
+  };
+
+  const confirmRolloverWeek = async () => {
+    try {
+      setRollingOver(true);
+      const result = await apiService.rolloverWeek();
+      toast.success(`Successfully rolled over from Week ${result.previous_week} to Week ${result.new_week}`);
+      setShowRolloverDialog(false);
+      
+      // Reload the page to refresh all data
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to rollover week:', error);
+      toast.error('Failed to rollover week');
+    } finally {
+      setRollingOver(false);
+    }
+  };
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     // Update URL to reflect the active tab
@@ -214,15 +238,18 @@ export default function LeaguePage() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button
-              onClick={handleRefreshOdds}
-              disabled={refreshing}
-              variant="outline"
-              size="sm"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh Odds
-            </Button>
+            {league?.is_commissioner && (
+              <Button
+                onClick={handleRolloverWeek}
+                disabled={rollingOver}
+                variant="outline"
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600"
+              >
+                <Calendar className={`h-4 w-4 mr-2 ${rollingOver ? 'animate-spin' : ''}`} />
+                Rollover Week
+              </Button>
+            )}
             {league.is_commissioner && (
               <Button
                 onClick={() => navigate(`/leagues/${league.id}/settings`)}
@@ -490,6 +517,71 @@ export default function LeaguePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Rollover Confirmation Dialog */}
+      <Dialog open={showRolloverDialog} onOpenChange={setShowRolloverDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              Rollover Week
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to rollover to the next week? This action will:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            <div className="text-sm space-y-2">
+              <div className="flex items-start gap-2">
+                <span className="text-orange-500">•</span>
+                <span>Finalize all pending matchups for Week {currentWeek - 1}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-orange-500">•</span>
+                <span>Update league standings and records</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-orange-500">•</span>
+                <span>Refresh betting options for the new week</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-orange-500">•</span>
+                <span>Advance playoff teams (if applicable)</span>
+              </div>
+            </div>
+            
+            <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+              <p className="text-sm text-orange-800 dark:text-orange-200 font-medium">
+                ⚠️ This action cannot be undone!
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowRolloverDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmRolloverWeek} 
+              disabled={rollingOver}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {rollingOver ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Rolling Over...
+                </>
+              ) : (
+                <>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Rollover Week
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

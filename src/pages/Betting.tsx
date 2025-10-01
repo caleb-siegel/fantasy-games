@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Navigation } from '@/components/ui/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RefreshCw, Calendar, AlertTriangle } from 'lucide-react';
 import { BettingInterface } from '@/components/betting/BettingInterface';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +18,8 @@ export default function Betting() {
   const [currentMatchup, setCurrentMatchup] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showRolloverDialog, setShowRolloverDialog] = useState(false);
+  const [rollingOver, setRollingOver] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -72,6 +75,27 @@ export default function Betting() {
       toast.error('Failed to refresh odds');
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleRolloverWeek = () => {
+    setShowRolloverDialog(true);
+  };
+
+  const confirmRolloverWeek = async () => {
+    try {
+      setRollingOver(true);
+      const result = await apiService.rolloverWeek();
+      toast.success(`Successfully rolled over from Week ${result.previous_week} to Week ${result.new_week}`);
+      setShowRolloverDialog(false);
+      
+      // Reload the page to refresh all data
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to rollover week:', error);
+      toast.error('Failed to rollover week');
+    } finally {
+      setRollingOver(false);
     }
   };
 
@@ -134,14 +158,16 @@ export default function Betting() {
             <h1 className="text-3xl font-bold">NFL Betting</h1>
             <p className="text-muted-foreground">Week {currentWeek} • {selectedLeague?.name}</p>
           </div>
-          <Button
-            onClick={handleRefreshOdds}
-            disabled={refreshing}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh Odds
-          </Button>
+          {selectedLeague?.is_commissioner && (
+            <Button
+              onClick={handleRolloverWeek}
+              disabled={rollingOver}
+              className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700"
+            >
+              <Calendar className={`h-4 w-4 ${rollingOver ? 'animate-spin' : ''}`} />
+              Rollover Week
+            </Button>
+          )}
         </div>
 
         {/* League Selection */}
@@ -187,6 +213,71 @@ export default function Betting() {
           </Card>
         )}
       </div>
+
+      {/* Rollover Confirmation Dialog */}
+      <Dialog open={showRolloverDialog} onOpenChange={setShowRolloverDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              Rollover Week
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to rollover to the next week? This action will:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            <div className="text-sm space-y-2">
+              <div className="flex items-start gap-2">
+                <span className="text-orange-500">•</span>
+                <span>Finalize all pending matchups for Week {currentWeek - 1}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-orange-500">•</span>
+                <span>Update league standings and records</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-orange-500">•</span>
+                <span>Refresh betting options for the new week</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-orange-500">•</span>
+                <span>Advance playoff teams (if applicable)</span>
+              </div>
+            </div>
+            
+            <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+              <p className="text-sm text-orange-800 dark:text-orange-200 font-medium">
+                ⚠️ This action cannot be undone!
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowRolloverDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmRolloverWeek} 
+              disabled={rollingOver}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {rollingOver ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Rolling Over...
+                </>
+              ) : (
+                <>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Rollover Week
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

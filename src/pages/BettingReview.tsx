@@ -171,6 +171,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
     
     try {
       const matchupResponse = await apiService.getUserMatchup(parseInt(leagueId), week);
+      console.log('matchup value determined by week value of ', week)
       if (matchupResponse.matchup) {
         setMatchupId(matchupResponse.matchup.id);
       }
@@ -334,6 +335,7 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
 
       // Place regular bets
       if (betslipBets.length > 0) {
+        console.log('matchupId', matchupId);
         const batchBets = betslipBets.map(betslipBet => ({
           matchup_id: matchupId,
           betting_option_id: betslipBet.bettingOption.id,

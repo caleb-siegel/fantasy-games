@@ -284,8 +284,6 @@ export function ComprehensiveMatchups({
     
     // Calculate max potential payout (all bets, but only potential for pending, actual for evaluated)
     const maxPotentialPayout = bets.reduce((sum, bet) => {
-      console.log(`Bet actual payout: ${bet.actual_payout || bet.potential_payout}`)
-      console.log(`sum: ${sum}`)
       if (bet.status && bet.status !== 'pending') {
         return sum + (bet.actual_payout || 0);
       }
@@ -294,8 +292,6 @@ export function ComprehensiveMatchups({
     
     // Calculate current payout (only actual winnings from completed bets)
     const currentPayout = visibleBets.reduce((sum, bet) => {
-      console.log(`Bet: ${JSON.stringify(bet)}`)
-      console.log(`Bet actual payout: ${bet.actual_payout}`)
       if (bet.status && bet.status !== 'pending') {
         return sum + (bet.actual_payout || 0);
       }
