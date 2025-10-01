@@ -50,7 +50,7 @@ export function useCurrentWeek() {
   }, [fetchCurrentWeek]);
 
   return {
-    currentWeek: weekInfo?.current_week || 1,
+    currentWeek: weekInfo?.current_week,
     seasonYear: weekInfo?.season_year || 2024,
     weekType: weekInfo?.week_type || 'Regular Season',
     canRollover: weekInfo?.can_rollover || false,
