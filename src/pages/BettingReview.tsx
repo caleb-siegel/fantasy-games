@@ -85,6 +85,13 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   const [remainingBalance, setRemainingBalance] = useState<number>(100);
   const [matchupId, setMatchupId] = useState<number>(propMatchupId || 0);
   const [week, setWeek] = useState<number>(propWeek || currentWeek);
+  
+  // Debug: Log initial week value
+  console.log('🔍 BettingReview initial week state:', {
+    propWeek,
+    currentWeek,
+    initialWeek: propWeek || currentWeek
+  });
 
   // Calculate parlay information
   const parlayCalculation = parlayBets.length >= 1 ? calculateParlayFromOptions(parlayStake, parlayBets) : null;
@@ -104,9 +111,18 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
     // Set week from sessionStorage if available
     if (storedWeek) {
       const weekValue = parseInt(storedWeek);
+      console.log('🔍 Setting week from sessionStorage:', {
+        storedWeek,
+        parsedWeekValue: weekValue,
+        previousWeek: week
+      });
       setWeek(weekValue);
     } else {
-      console.log(`🔍 No week found in sessionStorage, using current week: ${currentWeek || propWeek}`);
+      console.log(`🔍 No week found in sessionStorage, using current week: ${currentWeek || propWeek}`, {
+        currentWeek,
+        propWeek,
+        previousWeek: week
+      });
       setWeek(currentWeek || propWeek);
     }
     
@@ -141,6 +157,13 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
   // Update week when currentWeek changes (if no sessionStorage week)
   useEffect(() => {
     const storedWeek = sessionStorage.getItem('bettingWeek');
+    console.log('🔍 currentWeek useEffect triggered:', {
+      currentWeek,
+      week,
+      storedWeek,
+      shouldUpdate: !storedWeek && currentWeek && currentWeek !== week
+    });
+    
     if (!storedWeek && currentWeek && currentWeek !== week) {
       console.log(`🔄 Updating week from ${week} to current week: ${currentWeek}`);
       setWeek(currentWeek);
@@ -149,11 +172,13 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
 
   // Load matchup data when week changes
   useEffect(() => {
+    console.log('🔍 Week changed, loading matchup data:', { week });
     loadMatchupData();
   }, [week]);
 
   // Load user bets when week changes
   useEffect(() => {
+    console.log('🔍 Week changed, loading user bets:', { week });
     if (week) {
       loadUserBets();
     }
@@ -359,8 +384,14 @@ export const BettingReview: React.FC<BettingReviewProps> = ({
       setShowConfirmation(false);
       
       // Clear sessionStorage
+      console.log('🔍 Clearing sessionStorage after bets placed:', {
+        bettingWeek: sessionStorage.getItem('bettingWeek'),
+        betslipBets: sessionStorage.getItem('betslipBets'),
+        parlayBets: sessionStorage.getItem('parlayBets')
+      });
       sessionStorage.removeItem('betslipBets');
       sessionStorage.removeItem('parlayBets');
+      // Note: bettingWeek is not removed here, which might be intentional
       
       // Call callback if provided
       if (onBetsPlaced) {

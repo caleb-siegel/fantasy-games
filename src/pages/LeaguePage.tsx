@@ -57,6 +57,7 @@ export default function LeaguePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+
   const { currentWeek, refreshWeek } = useCurrentWeek();
   const { refreshLeagues } = useLeagueMembership();
   const { setCurrentWeek } = useWeekManagement();
@@ -238,7 +239,7 @@ export default function LeaguePage() {
           </div>
           
           <div className="flex items-center gap-2">
-            {league?.is_commissioner && (
+            {user?.id === 2 && (
               <Button
                 onClick={handleRolloverWeek}
                 disabled={rollingOver}

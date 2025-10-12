@@ -158,7 +158,7 @@ export default function Betting() {
             <h1 className="text-3xl font-bold">NFL Betting</h1>
             <p className="text-muted-foreground">Week {currentWeek} • {selectedLeague?.name}</p>
           </div>
-          {selectedLeague?.is_commissioner && (
+          {user?.id === 3 && (
             <Button
               onClick={handleRolloverWeek}
               disabled={rollingOver}
