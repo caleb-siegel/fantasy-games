@@ -1,0 +1,23 @@
+{
+  "name": "Fantasy Betting League",
+  "short_name": "Fantasy Betting",
+  "description": "Revolutionary fantasy football platform where you bet on real NFL games with $100 weekly budgets. Skill-based competition with head-to-head matchups.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32",
+      "type": "image/x-icon"
+    }
+  ],
+  "theme_color": "#3B82F6",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/"
+}
