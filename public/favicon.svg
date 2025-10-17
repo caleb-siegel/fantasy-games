@@ -8,23 +8,31 @@
       <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
     </linearGradient>
+    <linearGradient id="fieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#16A34A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#15803D;stop-opacity:1" />
+    </linearGradient>
   </defs>
   
-  <!-- Background circle -->
-  <circle cx="16" cy="16" r="15" fill="url(#grad1)" stroke="#1E40AF" stroke-width="1"/>
+  <!-- Football field background -->
+  <rect x="0" y="0" width="32" height="32" fill="url(#fieldGrad)"/>
   
-  <!-- Football shape -->
-  <ellipse cx="16" cy="16" rx="8" ry="4" fill="url(#grad2)" stroke="#D97706" stroke-width="0.5"/>
+  <!-- Field yardage markers (white lines) -->
+  <line x1="4" y1="8" x2="4" y2="24" stroke="white" stroke-width="0.5" opacity="0.8"/>
+  <line x1="8" y1="6" x2="8" y2="26" stroke="white" stroke-width="0.5" opacity="0.8"/>
+  <line x1="12" y1="8" x2="12" y2="24" stroke="white" stroke-width="0.5" opacity="0.8"/>
+  <line x1="16" y1="4" x2="16" y2="28" stroke="white" stroke-width="1" opacity="0.9"/>
+  <line x1="20" y1="8" x2="20" y2="24" stroke="white" stroke-width="0.5" opacity="0.8"/>
+  <line x1="24" y1="6" x2="24" y2="26" stroke="white" stroke-width="0.5" opacity="0.8"/>
+  <line x1="28" y1="8" x2="28" y2="24" stroke="white" stroke-width="0.5" opacity="0.8"/>
   
-  <!-- Football laces -->
-  <line x1="12" y1="14" x2="20" y2="14" stroke="#D97706" stroke-width="0.3"/>
-  <line x1="12" y1="16" x2="20" y2="16" stroke="#D97706" stroke-width="0.3"/>
-  <line x1="12" y1="18" x2="20" y2="18" stroke="#D97706" stroke-width="0.3"/>
+  <!-- Large football shape (vertical) -->
+  <ellipse cx="16" cy="16" rx="8" ry="12" fill="url(#grad2)" stroke="#D97706" stroke-width="1"/>
   
-  <!-- Dollar sign overlay -->
-  <text x="16" y="20" font-family="Arial, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="white">$</text>
+  <!-- Dollar sign instead of laces -->
+  <text x="16" y="19" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white" stroke="#D97706" stroke-width="0.3">$</text>
   
   <!-- Small stars for fantasy element -->
-  <polygon points="8,8 8.5,9.5 10,9.5 8.75,10.5 9.25,12 8,11 6.75,12 7.25,10.5 6,9.5 7.5,9.5" fill="white" opacity="0.8"/>
-  <polygon points="24,8 24.5,9.5 26,9.5 24.75,10.5 25.25,12 24,11 22.75,12 23.25,10.5 22,9.5 23.5,9.5" fill="white" opacity="0.8"/>
+  <polygon points="6,6 6.5,7.5 8,7.5 6.75,8.5 7.25,10 6,9 4.75,10 5.25,8.5 4,7.5 5.5,7.5" fill="white" opacity="0.8"/>
+  <polygon points="26,6 26.5,7.5 28,7.5 26.75,8.5 27.25,10 26,9 24.75,10 25.25,8.5 24,7.5 25.5,7.5" fill="white" opacity="0.8"/>
 </svg>
