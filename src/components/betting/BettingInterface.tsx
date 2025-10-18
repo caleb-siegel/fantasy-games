@@ -11,7 +11,7 @@ import { RefreshCw, DollarSign, TrendingUp, Clock, ChevronDown, ChevronUp, X } f
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { CompactBetslip } from './CompactBetslip';
-import { BettingOption as ParlayBettingOption, calculateParlayFromOptions } from '@/utils/parlayUtils';
+import { BettingOption as ParlayBettingOption, calculateParlayFromOptions, wouldCreateDuplicateOutcome } from '@/utils/parlayUtils';
 import { toast } from 'sonner';
 import { getDetailedGameDateTime, isGameLocked } from '@/utils/dateUtils';
 
@@ -315,9 +315,15 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
       gameInfo: gameInfo
     } as ParlayBettingOption;
 
-    // Check if already in parlay
+    // Check if already in parlay by ID
     if (parlayBets.some(bet => bet.id === bettingOption.id)) {
       toast.error('This bet is already in your parlay');
+      return;
+    }
+
+    // Check for duplicate outcome in the same game and market
+    if (wouldCreateDuplicateOutcome(parlayOption, parlayBets)) {
+      toast.error('Cannot add multiple bets on the same outcome from the same game and market type to a parlay');
       return;
     }
 

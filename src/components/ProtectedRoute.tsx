@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeagueMembership } from '@/hooks/useLeagueMembership';
 import { NoLeagueGate } from '@/components/NoLeagueGate';
+import { AuthLoader } from '@/components/AuthLoader';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -16,11 +17,7 @@ export function ProtectedRoute({ children, requireLeague = true }: ProtectedRout
 
   // Show loading while checking authentication and league membership
   if (authLoading || leagueLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <AuthLoader message="Loading your data..." />;
   }
 
   // Redirect to login if not authenticated

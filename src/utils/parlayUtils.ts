@@ -114,6 +114,34 @@ export function validateParlayBets(bettingOptions: BettingOption[]): boolean {
     throw new Error('Cannot include locked betting options in parlay');
   }
   
+  // Check for duplicate outcomes in the same game and market
+  const duplicateOutcomes = bettingOptions.filter((option, index) => {
+    return bettingOptions.some((otherOption, otherIndex) => {
+      if (otherIndex === index) return false;
+      
+      // Basic checks that always apply
+      const sameGame = otherOption.game_id === option.game_id;
+      const sameMarket = otherOption.market_type === option.market_type;
+      const sameOutcome = otherOption.outcome_name === option.outcome_name;
+      
+      if (!sameGame || !sameMarket || !sameOutcome) {
+        return false;
+      }
+      
+      // For player prop markets, also check player_name
+      if (option.market_type.startsWith('player_')) {
+        return otherOption.player_name === option.player_name;
+      }
+      
+      // For non-player markets, the basic checks are sufficient
+      return true;
+    });
+  });
+  
+  if (duplicateOutcomes.length > 0) {
+    throw new Error('Cannot include multiple bets on the same outcome from the same game and market type in a parlay');
+  }
+  
   return true;
 }
 
@@ -179,6 +207,33 @@ export function getMarketDisplayName(marketType: string): string {
         word.charAt(0).toUpperCase() + word.slice(1)
       ).join(' ');
   }
+}
+
+/**
+ * Check if adding a betting option would create a duplicate outcome in a parlay
+ */
+export function wouldCreateDuplicateOutcome(
+  newOption: BettingOption, 
+  existingOptions: BettingOption[]
+): boolean {
+  return existingOptions.some(existingOption => {
+    // Basic checks that always apply
+    const sameGame = existingOption.game_id === newOption.game_id;
+    const sameMarket = existingOption.market_type === newOption.market_type;
+    const sameOutcome = existingOption.outcome_name === newOption.outcome_name;
+    
+    if (!sameGame || !sameMarket || !sameOutcome) {
+      return false;
+    }
+    
+    // For player prop markets, also check player_name
+    if (newOption.market_type.startsWith('player_')) {
+      return existingOption.player_name === newOption.player_name;
+    }
+    
+    // For non-player markets, the basic checks are sufficient
+    return true;
+  });
 }
 
 /**

@@ -7,8 +7,14 @@ import { useAuth } from "@/hooks/useAuth"
 import heroImage from "@/assets/hero-betting.jpg"
 
 export default function Landing() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
   const navigate = useNavigate()
+  
+  // This should not be needed anymore since App.tsx handles loading,
+  // but keeping it as a safety net
+  if (loading) {
+    return null; // App.tsx will show the loader
+  }
   const features = [
     {
       icon: DollarSign,
