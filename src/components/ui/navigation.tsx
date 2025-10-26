@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { useLeagueMembership } from "@/hooks/useLeagueMembership"
 import { useLeagueContext } from "@/hooks/useLeagueContext"
+import { ThemeToggle } from "@/components/ThemeToggle"
 import { useEffect, useState } from "react"
 import React from "react"
 
@@ -123,7 +124,7 @@ export function Navigation() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">
               <Link to="/" className="text-xl font-bold text-primary">
-                FantasyBet League
+                Hey
               </Link>
               
               <div className="hidden md:flex space-x-1">
@@ -146,6 +147,7 @@ export function Navigation() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <ThemeToggle />
               {isAuthenticated ? (
                 <>
                   <div className="hidden sm:block text-sm text-muted-foreground">

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { LeagueMembershipProvider } from "@/hooks/useLeagueMembership";
 import { LeagueContextProvider } from "@/hooks/useLeagueContext";
+import { ThemeProvider } from "@/hooks/useTheme";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthLoader } from "@/components/AuthLoader";
 import Landing from "./pages/Landing";
@@ -74,15 +75,17 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <LeagueMembershipProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AppRoutes />
-        </TooltipProvider>
-      </LeagueMembershipProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <LeagueMembershipProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AppRoutes />
+          </TooltipProvider>
+        </LeagueMembershipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
