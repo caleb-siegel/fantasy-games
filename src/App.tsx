@@ -17,6 +17,7 @@ import LeagueSettings from "./pages/LeagueSettings";
 import WeeklyMatchup from "./pages/WeeklyMatchup";
 import Standings from "./pages/Standings";
 import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import AuthForm from "./components/AuthForm";
 import { PlayerProfile } from "./components/profiles/PlayerProfile";
@@ -65,6 +66,7 @@ const AppRoutes = () => {
           </LeagueContextProvider>
         } />
         <Route path="/profile" element={<ProtectedRoute requireLeague={false}><Profile /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute requireLeague={false}><Admin /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

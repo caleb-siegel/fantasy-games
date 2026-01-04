@@ -427,8 +427,13 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
     if (marketType.startsWith('player_')) {
       // For player props, show player name and outcome
       const playerName = outcome.player_name || 'Player'; // Fallback if player_name not available
-      const outcomeText = outcome.outcome_name; // "Over" or "Under"
+      const outcomeText = outcome.outcome_name; // "Over", "Under", or "Yes"
       const line = outcome.outcome_point;
+      
+      // For 1st TD and Anytime TD, outcome is "Yes" - just show player name
+      if (marketType === 'player_1st_td' || marketType === 'player_anytime_td') {
+        return playerName;
+      }
       
       if (line !== null && line !== undefined) {
         return `${playerName} ${outcomeText} ${line}`;
@@ -538,11 +543,149 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                 
                 if (!outcomes) return null;
                 
+                // Check if this is a single-column player prop market (1st TD or Anytime TD)
+                const isSingleColumnPlayerProp = currentMarketType === 'player_1st_td' || currentMarketType === 'player_anytime_td';
+                
                 return (
                   <div className="space-y-3">
                     <h4 className="font-semibold text-lg text-white">{getMarketDisplayName(currentMarketType)}</h4>
                     
-                    {/* Organized betting layout with left/right sections */}
+                    {/* Single column layout for 1st TD / Anytime TD, two columns for others */}
+                    {isSingleColumnPlayerProp ? (
+                      <div className="border border-gray-600 rounded-lg p-4 bg-gray-800/50">
+                        <div className="space-y-2">
+                          {(() => {
+                            // Group outcomes by player_name
+                            const outcomesByPlayer = new Map<string, Array<[string, any]>>();
+                            
+                            Object.entries(outcomes).forEach(([outcomeKey, outcome]) => {
+                              const playerName = outcome.player_name || 'Unknown Player';
+                              if (!outcomesByPlayer.has(playerName)) {
+                                outcomesByPlayer.set(playerName, []);
+                              }
+                              outcomesByPlayer.get(playerName)!.push([outcomeKey, outcome]);
+                            });
+                            
+                            // Show empty state if no outcomes
+                            if (outcomesByPlayer.size === 0) {
+                              return (
+                                <div className="text-center py-8 text-gray-400">
+                                  <div className="text-sm">No betting options available</div>
+                                </div>
+                              );
+                            }
+                            
+                            // Render players in alphabetical order
+                            const sortedPlayers = Array.from(outcomesByPlayer.entries()).sort(([a], [b]) => a.localeCompare(b));
+                            
+                            return sortedPlayers.map(([playerName, playerOutcomes]) => (
+                              <div key={playerName} className="p-3 bg-gray-700 rounded hover:bg-gray-600 transition-colors">
+                                <div className="font-medium text-white text-sm mb-2">{playerName}</div>
+                                <div className="flex flex-wrap gap-2">
+                                  {playerOutcomes.map(([outcomeKey, outcome]) => (
+                                    <div key={outcomeKey} className="flex items-center gap-2">
+                                      {outcome.bookmakers.length > 0 && (
+                                        <>
+                                          {isGameLocked(gameWithOptions.game.start_time) ? (
+                                            <Button
+                                              size="sm"
+                                              disabled
+                                              className="bg-gray-500 text-gray-300 font-bold px-3 py-1 text-sm cursor-not-allowed"
+                                            >
+                                              LOCKED
+                                            </Button>
+                                          ) : (
+                                            <Button
+                                              size="sm"
+                                              className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 text-sm"
+                                              onClick={() => {
+                                                const bestOdds = findBestOdds(outcome.bookmakers);
+                                                if (bestOdds) {
+                                                  addToBetslip({
+                                                    id: bestOdds.id,
+                                                    game_id: gameWithOptions.game.id,
+                                                    market_type: currentMarketType,
+                                                    outcome_name: outcome.outcome_name,
+                                                    outcome_point: outcome.outcome_point,
+                                                    bookmaker: bestOdds.bookmaker,
+                                                    american_odds: bestOdds.american_odds,
+                                                    decimal_odds: bestOdds.decimal_odds,
+                                                    player_name: outcome.player_name
+                                                  }, {
+                                                    home_team: gameWithOptions.game.home_team,
+                                                    away_team: gameWithOptions.game.away_team,
+                                                    start_time: gameWithOptions.game.start_time
+                                                  });
+                                                }
+                                              }}
+                                            >
+                                              {formatOdds(findBestOdds(outcome.bookmakers)?.american_odds || 0)}
+                                            </Button>
+                                          )}
+                                          {isGameLocked(gameWithOptions.game.start_time) ? (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              disabled
+                                              className="bg-gray-500 text-gray-300 border-gray-500 px-2 py-1 text-xs cursor-not-allowed"
+                                            >
+                                              LOCKED
+                                            </Button>
+                                          ) : (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 px-2 py-1 text-xs"
+                                              onClick={() => {
+                                                const bestOdds = findBestOdds(outcome.bookmakers);
+                                                if (bestOdds) {
+                                                  addToParlay({
+                                                    id: bestOdds.id,
+                                                    game_id: gameWithOptions.game.id,
+                                                    market_type: currentMarketType,
+                                                    outcome_name: outcome.outcome_name,
+                                                    outcome_point: outcome.outcome_point,
+                                                    player_name: outcome.player_name,
+                                                    bookmaker: bestOdds.bookmaker,
+                                                    american_odds: bestOdds.american_odds,
+                                                    decimal_odds: bestOdds.decimal_odds,
+                                                    is_locked: false
+                                                  }, {
+                                                    home_team: gameWithOptions.game.home_team,
+                                                    away_team: gameWithOptions.game.away_team,
+                                                    start_time: gameWithOptions.game.start_time
+                                                  });
+                                                }
+                                              }}
+                                            >
+                                              Parlay
+                                            </Button>
+                                          )}
+                                          {outcome.bookmakers.length > 1 && (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="border-gray-500 text-gray-300 hover:bg-gray-600 px-2 py-1 text-xs"
+                                              onClick={() => setPopupBookmakers({
+                                                outcomeKey,
+                                                bookmakers: outcome.bookmakers,
+                                                outcomeName: getOutcomeDisplayName(outcome, currentMarketType)
+                                              })}
+                                            >
+                                              +{outcome.bookmakers.length - 1}
+                                            </Button>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Left section - Away team or Under */}
                       <div className="border border-gray-600 rounded-lg p-4 bg-gray-800/50">
@@ -844,6 +987,7 @@ export const BettingInterface: React.FC<BettingInterfaceProps> = ({ matchupId, l
                         </div>
                       </div>
                     </div>
+                    )}
                   </div>
                 );
               })()}

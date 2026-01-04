@@ -581,6 +581,87 @@ class ApiService {
     });
   }
 
+  // Admin functions
+  async adminEvaluateBets(dryRun: boolean = false) {
+    return this.request<{
+      success: boolean;
+      dry_run?: boolean;
+      bets_evaluated?: number;
+      bets_won?: number;
+      bets_lost?: number;
+      bets_pending?: number;
+      pending_bets?: number;
+      pending_parlays?: number;
+      parlay_legs_evaluated?: number;
+      parlay_legs_won?: number;
+      parlay_legs_lost?: number;
+      parlays_evaluated?: number;
+      parlays_won?: number;
+      parlays_lost?: number;
+      total_payouts?: number;
+      message: string;
+    }>('/api/week/admin/evaluate-bets', {
+      method: 'POST',
+      body: JSON.stringify({ dry_run: dryRun })
+    });
+  }
+
+  async adminEvaluateMatchups(dryRun: boolean = false) {
+    return this.request<{
+      success: boolean;
+      dry_run?: boolean;
+      matchups_finalized?: number;
+      standings_updated?: number;
+      weeks_processed?: number[];
+      unresolved_matchups?: number;
+      weeks_affected?: number[];
+      matchups_by_week?: Record<string, number>;
+      message: string;
+    }>('/api/week/admin/evaluate-matchups', {
+      method: 'POST',
+      body: JSON.stringify({ dry_run: dryRun })
+    });
+  }
+
+  async adminFindGames(week?: number, dryRun: boolean = false) {
+    return this.request<{
+      success: boolean;
+      dry_run?: boolean;
+      week: number;
+      games_before: number;
+      games_after?: number;
+      new_games?: number;
+      games_found_in_api?: number;
+      new_games_estimated?: number;
+      message: string;
+    }>('/api/week/admin/find-games', {
+      method: 'POST',
+      body: JSON.stringify({ week, dry_run: dryRun })
+    });
+  }
+
+  async adminFindBets(week?: number, dryRun: boolean = false) {
+    return this.request<{
+      success: boolean;
+      dry_run?: boolean;
+      week: number;
+      options_before: number;
+      options_after?: number;
+      new_options?: number;
+      player_props_before: number;
+      player_props_after?: number;
+      new_player_props?: number;
+      estimated_options_in_api?: number;
+      estimated_player_props_in_api?: number;
+      estimated_new_options?: number;
+      estimated_new_player_props?: number;
+      message: string;
+    }>('/api/week/admin/find-bets', {
+      method: 'POST',
+      body: JSON.stringify({ week, dry_run: dryRun })
+    });
+  }
+
 }
 
 // Create and export a singleton instance

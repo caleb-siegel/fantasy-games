@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { TrendingUp, Users, Trophy, BarChart3, LogOut, ChevronRight, Home, Settings, User, Target, Calendar, MoreHorizontal } from "lucide-react"
+import { TrendingUp, Users, Trophy, BarChart3, LogOut, ChevronRight, Home, Settings, User, Target, Calendar, MoreHorizontal, Shield } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { useLeagueMembership } from "@/hooks/useLeagueMembership"
@@ -108,12 +108,24 @@ export function Navigation() {
         path: "/profile",
         icon: User
       })
+    } else if (pathSegments[0] === 'admin') {
+      breadcrumbs.push({
+        label: "Admin",
+        path: "/admin",
+        icon: Shield
+      })
     }
 
     return breadcrumbs
   }
 
   const breadcrumbs = generateBreadcrumbs()
+
+  // Check if user is admin (caleb siegel)
+  const isAdmin = user && (
+    (user.username?.toLowerCase().includes('caleb') && user.username?.toLowerCase().includes('siegel')) ||
+    (user.email?.toLowerCase().includes('caleb') && user.email?.toLowerCase().includes('siegel'))
+  )
 
   return (
     <>
@@ -151,6 +163,16 @@ export function Navigation() {
                   <div className="hidden sm:block text-sm text-muted-foreground">
                     Welcome, <span className="text-primary font-semibold">{user?.username}</span>
                   </div>
+                  {isAdmin && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => navigate('/admin')}
+                    >
+                      <Shield className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">Admin</span>
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={() => navigate('/profile')}>
                     Profile
                   </Button>
